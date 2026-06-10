@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from app.database import engine, Base
 # Import models to ensure they are registered on metadata before create_all
 from app.models import contact, thread, email, action, audit_log, knowledge_chunk
-from app.routes import ingest, threads, dashboard, status as status_route, rag, actions, agent, analytics, intelligence
+from app.routes import ingest, threads, dashboard, status as status_route, rag, actions, agent, analytics, intelligence, classification
 from app.config import settings
 
 app = FastAPI(
@@ -92,6 +92,7 @@ app.include_router(actions.router)
 app.include_router(agent.router)
 app.include_router(analytics.router)
 app.include_router(intelligence.router)
+app.include_router(classification.router)
 
 # 5. GET /health route
 @app.get("/health", status_code=status.HTTP_200_OK, tags=["system"])

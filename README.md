@@ -91,6 +91,16 @@ The platform enforces strict safe-action rules to mitigate legal, security, and 
 
 ---
 
+## 5.5. LLM Classification Provider
+The system features a pluggable LLM structured classification layer that operates directly during email ingestion:
+* **LLM_PROVIDER**: Set to `mock` by default in config settings.
+* **Deterministic Fallback**: Falls back automatically to offline `mock` mode if `OPENAI_API_KEY` is not found, enabling offline execution and reproducible evaluation.
+* **Structured Output Schema**: Extracts key parameters including category, sentiment, sentiment score, urgency, requires human flag, model provider, prompt snapshot and regex-extracted entities (order IDs, ticket IDs, monetary amounts, deadlines, and products mentioned).
+* **Low Confidence Safety Valve**: If classification confidence drops below `0.70`, the system forces `requires_human=True` and disables auto-replies to prevent inappropriate automated emails.
+* **Safety Overrides**: The classifier output strictly respects pre-filter heuristics. Security threats, legal disputes, spam, internal emails, and regulatory compliance actions are never downgraded, and their auto-reply protections are strictly preserved.
+
+---
+
 ## 6. Critical Scenario Validation
 
 The following validation states are processed dynamically:
@@ -122,12 +132,14 @@ The following validation states are processed dynamically:
    pip install -r requirements.txt
    ```
 4. **Configure Environment variables**:
-   Create a `.env` file in the root backend directory:
-   ```env
-   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/senai_crm
-   BACKEND_PORT=8000
-   ```
-   *(Note: If no PostgreSQL configuration is supplied, the server falls back to SQLite `sqlite:///./senai_crm.db` automatically for ease of local testing).*
+    Create a `.env` file in the root backend directory:
+    ```env
+    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/senai_crm
+    BACKEND_PORT=8000
+    LLM_PROVIDER=mock
+    OPENAI_API_KEY=
+    ```
+    *(Note: If no PostgreSQL configuration is supplied, the server falls back to SQLite `sqlite:///./senai_crm.db` automatically for ease of local testing).*
 5. **Start backend application**:
    ```bash
    uvicorn app.main:app --reload --port 8000
@@ -172,6 +184,7 @@ python scripts/stream_emails.py --speed 10
 | **POST** | `/api/ingest` | Normalizes and ingests email payloads |
 | **GET** | `/api/status/{message_id}` | Returns classification metrics for an email |
 | **GET** | `/api/actions/{message_id}` | Returns action plan, trace, and policy grounding details |
+| **GET** | `/api/classification/{message_id}` | Returns structured LLM classification, entities, and prompt snapshots |
 | **GET** | `/dashboard/stats` | Aggregates operational KPIs for the stats cards |
 | **GET** | `/threads/{contact_email}` | Returns historical threads and contact profile metrics |
 | **GET** | `/rag/search?q=...` | Executes semantic search query against KB policies |
@@ -185,7 +198,8 @@ Follow this workflow to test the end-to-end functionality:
 1. **Start Backend Server**: Confirm uvicorn is running on port `8000`.
 2. **Seed KB**: Run `python scripts/seed_kb.py` to index markdown policies.
 3. **Stream Emails**: Execute `python scripts/stream_emails.py --speed 10`. This ingests over 60 simulated emails into the database.
-4. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
+4. **Validate LLM Classification**: Execute `python scripts/test_llm_classification.py` to verify structured outputs, entity extraction, and safety overrides.
+5. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
 5. **Evaluate Crucial Scenarios**:
    * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
    * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.

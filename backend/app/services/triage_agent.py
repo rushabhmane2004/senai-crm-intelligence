@@ -1,7 +1,7 @@
 import re
 from typing import Dict, Any, List, Optional
 
-def run_triage_agent(email: Any, heuristic_result: Dict[str, Any], rag_context: Optional[List[Dict[str, Any]]] = None, thread_history: Optional[List[Any]] = None) -> Dict[str, Any]:
+def _run_triage_agent_impl(email: Any, heuristic_result: Dict[str, Any], rag_context: Optional[List[Dict[str, Any]]] = None, thread_history: Optional[List[Any]] = None) -> Dict[str, Any]:
     """
     Triage Agent (triage-agent-v1)
     Analyzes email payload, heuristic predictions, and RAG context to formulate:
@@ -328,4 +328,20 @@ def run_triage_agent(email: Any, heuristic_result: Dict[str, Any], rag_context: 
               "General requests are routed to standard support with standard automated acknowledgments.",
               "Draft standard acknowledgment, set auto-reply to allowed.")
     res["next_actions"] = ["Assign ticket to general support queue"]
+    return res
+
+def run_triage_agent(email: Any, heuristic_result: Dict[str, Any], rag_context: Optional[List[Dict[str, Any]]] = None, thread_history: Optional[List[Any]] = None) -> Dict[str, Any]:
+    res = _run_triage_agent_impl(email, heuristic_result, rag_context, thread_history)
+    if heuristic_result and heuristic_result.get("low_confidence_review", False):
+        res["auto_reply_allowed"] = False
+        res["requires_human_approval"] = True
+        if res["safety_level"] == "safe":
+            res["safety_level"] = "restricted"
+        
+        res["reasoning_trace"].append({
+            "step": len(res["reasoning_trace"]) + 1,
+            "observation": "Low classification confidence detected (<0.70).",
+            "reasoning": "Safety guidelines require pausing automation for low confidence predictions to prevent incorrect replies.",
+            "result": "Force requires_human_approval to true and auto_reply_allowed to false."
+        })
     return res

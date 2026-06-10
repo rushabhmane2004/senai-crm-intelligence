@@ -242,14 +242,48 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         raw_entities["rag_used"] = False
         raw_entities["rag_error"] = rag_error_msg
 
-    # 7.5. Run Triage Agent and build safe CRM action plan
+    # 7.5. Run LLM Structured Classification
+    from app.services.llm_classifier import classify_with_llm_context
+    
+    # Load thread history for the active thread
+    thread_history_records = db.query(Email).filter(Email.thread_id == thread.id).order_by(Email.timestamp.asc()).all()
+    thread_history = [
+        {
+            "sender": e.sender,
+            "subject": e.subject,
+            "body": e.body,
+            "timestamp": e.timestamp.isoformat() if e.timestamp else None
+        }
+        for e in thread_history_records
+    ]
+    
+    rag_context_list = raw_entities.get("rag_context", None)
+    llm_classification = classify_with_llm_context(
+        email=dummy_email,
+        thread_history=thread_history,
+        rag_context=rag_context_list,
+        heuristic_result=heuristic_res
+    )
+    
+    raw_entities["llm_classification"] = llm_classification
+    raw_entities["prompt_snapshot"] = llm_classification.get("prompt_snapshot")
+    
+    # Handle low confidence override
+    llm_confidence = llm_classification.get("confidence", 0.0)
+    llm_sentiment_score = llm_classification.get("sentiment_score", 0.0)
+    
+    if llm_confidence < 0.70:
+        heuristic_res["requires_human"] = True
+        heuristic_res["low_confidence_review"] = True
+        raw_entities["low_confidence_review"] = True
+
+    # 7.6. Run Triage Agent and build safe CRM action plan
     from app.services.triage_agent import run_triage_agent
     from app.models.action import Action
     
-    rag_context_list = raw_entities.get("rag_context", None)
-    agent_plan = run_triage_agent(dummy_email, heuristic_res, rag_context=rag_context_list)
+    agent_plan = run_triage_agent(dummy_email, heuristic_res, rag_context=rag_context_list, thread_history=thread_history)
     
-    # 7.6. Store email with status, priority, and raw_entities
+    # 7.7. Store email with status, priority, and raw_entities
     email = Email(
         thread_id=thread.id,
         message_id=payload.message_id,
@@ -264,6 +298,10 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         status=heuristic_res["status"],
         raw_entities=raw_entities
     )
+    if hasattr(Email, "confidence"):
+        email.confidence = llm_confidence
+    if hasattr(Email, "sentiment_score"):
+        email.sentiment_score = llm_sentiment_score
     
     try:
         savepoint = db.begin_nested()

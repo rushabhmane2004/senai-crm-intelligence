@@ -7,5 +7,6 @@ from . import actions
 from . import agent
 from . import analytics
 from . import intelligence
+from . import classification
 
 

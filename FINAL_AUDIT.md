@@ -18,6 +18,7 @@ This document presents a comprehensive audit of the requirements, scenario valid
 | **Backend API** | **Yes** | [main.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/main.py) | FastAPI routes serving status, actions, dashboard stats, threads timeline, and analytics parameters. |
 | **Frontend Dashboard** | **Yes** | [App.jsx](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/frontend/src/App.jsx) | Dark interactive React dashboard displaying operations KPIs, critical sidebar, and trace logs. |
 | **Web Intelligence** | **Yes** | [intelligence.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/intelligence.py) | Lightweight offline web reputation API returning cached risk reports for Karen/Retail-Co. |
+| **LLM Classification** | **Yes** | [llm_classifier.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/llm_classifier.py) | Structured JSON output classification with entity extraction and deterministic safety overrides fallback. Verified by [test_llm_classification.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_llm_classification.py). |
 
 ---
 
@@ -98,7 +99,12 @@ The following items represent design limits established to comply with offline s
    python scripts/test_classifier_cases.py
    ```
    *Confirm all 8 scenario expectations pass and average runtime is under 10ms.*
-4. Attempt duplicate stream ingestion:
+4. Validate pluggable LLM classification & safety overrides:
+   ```bash
+   python scripts/test_llm_classification.py
+   ```
+   *Confirm all 6 LLM classification scenario expectations pass (msg_038, msg_052, msg_041, msg_006, msg_002, msg_020).*
+5. Attempt duplicate stream ingestion:
    ```bash
    curl.exe -X POST http://127.0.0.1:8000/api/ingest -H "Content-Type: application/json" -d "{\"message_id\": \"msg_038\", \"sender\": \"hacker@anon-collective.net\", \"subject\": \"We have your data - Pay Now\", \"body\": \"Ransomware extortion\", \"timestamp\": \"2023-10-11T17:30:00Z\", \"thread_id\": \"thread_security_002\"}"
    ```
