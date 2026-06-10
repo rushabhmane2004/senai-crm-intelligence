@@ -4,6 +4,12 @@ An AI-powered CRM operations platform that ingests customer emails, classifies r
 
 ---
 
+## Submission Links
+
+- GitHub Repository: https://github.com/rushabhmane2004/senai-crm-intelligence
+- Demo Video: 9
+
+
 ## 1. Project Overview & Key Features
 
 This platform is a production-grade operations system designed to ingest high-throughput support tickets, legal disputes, billing inquiries, and security incidents. It combines rule-based heuristics with retrieval-augmented generation (RAG) and an LLM-based safe action planner to execute decisions safely and transparently.
