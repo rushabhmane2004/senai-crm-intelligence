@@ -289,3 +289,90 @@ The classifier scans sender addresses and combined subjects/bodies in a strict p
 * **`msg_003`**, **`msg_031`**, **`msg_039`** -> Category: `Spam`, Status: `Spam`, Priority: `5`.
 * **`msg_017`**, **`msg_035`** -> Category: `Internal`, Status: `Ignored`, Priority: `10`.
 
+---
+
+## Phase 3: Production-Minded RAG Knowledge Pipeline
+
+Phase 3 implements a local vector storage and semantic lookup pipeline using ChromaDB and local sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`) to anchor AI decisions and routing recommendations in internal policies.
+
+### Business-Driven Grounding Architecture
+> [!IMPORTANT]
+> **RAG is used as a policy-grounding layer, not as a universal search step.**
+> The system avoids retrieval for spam/internal/low-risk emails to reduce latency, control costs, and avoid adding irrelevant context. Retrieval is triggered only when the action depends on internal policy, compliance rules, contractual obligations, or escalation ownership.
+
+* **Excluded from RAG**:
+  * Category is `Spam` or `Internal`.
+  * Category is `Other` with `Low` urgency.
+* **Eligible for RAG**:
+  * Category is `Legal`, `Compliance`, `Security`, `Billing`, `Complaint`, or `Inquiry`.
+  * Category is `Bug Report` and text mentions API keywords (`api`, `v2`, `endpoint`, `403`, `rate limit`, `webhook`).
+  * Any ticket with status `Escalated` (excluding Spam/Internal).
+
+---
+
+### Seeding and Managing the Knowledge Base
+
+Policy files are stored under `/kb`:
+1. `pricing_policy.md` - Subscriptions, seats, pro-rata, non-profit discounts, upgrade policies.
+2. `sla_policy.md` - 99.9% uptime commitments, P0 RCA targets (24 hours), credits, escalation paths.
+3. `refund_policy.md` - 14-day window, exceptions, reputation crisisCS escalation, chatbot misinformation safety rule.
+4. `api_docs.md` - v1 deprecation, v2 endpoints, webhook specs, X-Workspace-ID header requirements.
+5. `compliance_faq.md` - SOC 2 Type II, HIPAA BAA availability, GDPR Article 20 exports (30-day window).
+6. `escalation_matrix.md` - specialized routing queues (Security, Legal, GDPR, VIP Churn) and safety guidelines (e.g., Never auto-reply to ransomware/extortion).
+
+#### Seeding Command
+Ensure dependencies are installed and run the seeding script:
+```bash
+python scripts/seed_kb.py
+```
+This script initializes tables, reads all files under `/kb`, splits them into semantic chunks of ~300-500 tokens, calculates embeddings, indexes them under Chroma (`backend/chroma_store`), and updates the database catalog table (`knowledge_chunks`) checking unique hashes to avoid duplicates.
+
+---
+
+### RAG Operations & API Endpoints
+
+1. **Vector Search API (`GET /rag/search`)**:
+   Query the knowledge base via the debug endpoint:
+   ```bash
+   GET /rag/search?q=refund public review escalation&top_k=3
+   ```
+2. **In-Flight Grounding during Ingestion**:
+   When an incoming email qualifies for RAG, a targeted query is constructed and the top 3 policy citations are embedded inside the `raw_entities` column:
+   ```json
+   "rag_used": true,
+   "rag_query": "refund policy exception service failure retention playbook",
+   "rag_context": [
+     {
+       "source_doc": "refund_policy.md",
+       "policy_ref": "refund_policy.md#chunk-0",
+       "similarity_score": 0.478,
+       "chunk_preview": "# Refund and Customer Retention Policy..."
+     }
+   ]
+   ```
+   *If the RAG service fails (due to model loading or vector store read issues), the email ingestion does not block; it registers the failure in an `AuditLog` entry, appends `rag_error` in `raw_entities`, and successfully finishes ingestion.*
+
+---
+
+### Verification and Test Queries
+
+Run verification queries using the provided helper:
+```bash
+python scripts/verify_rag.py
+```
+
+Expected search results:
+1. **Query**: `refund public review escalation`
+   * Returns: `refund_policy.md`, `escalation_matrix.md`
+2. **Query**: `GDPR Article 20 data portability 30-day statutory window`
+   * Returns: `compliance_faq.md`, `escalation_matrix.md`
+3. **Query**: `SLA breach RCA 24 hours downtime credit`
+   * Returns: `sla_policy.md`, `escalation_matrix.md` (or top policy chunks)
+4. **Query**: `API v2 403 X-Workspace-ID`
+   * Returns: `api_docs.md`
+5. **Query**: `nonprofit discount pro-rata billing`
+   * Returns: `pricing_policy.md`
+6. **Query**: `ransomware never auto-reply escalation`
+   * Returns: `escalation_matrix.md`
+
+

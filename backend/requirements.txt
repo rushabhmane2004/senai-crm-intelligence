@@ -7,3 +7,6 @@ pydantic-settings
 python-dotenv
 requests
 email-validator
+chromadb
+sentence-transformers
+numpy
