@@ -202,3 +202,20 @@ Follow this workflow to test the end-to-end functionality:
 * **Explainability**: Persists comprehensive step-by-step agent reasoning logs and policy citation indices in database tables, keeping actions fully auditable.
 * **Safety first**: Prevents hallucinated or inappropriate replies to sensitive items (such as legal threats, compliance, or security extortion).
 * **Deep Context**: Merges individual emails into thread objects, mapping customer lifecycles and historical communications in real-time.
+
+---
+
+## 11. Known Limitations
+
+The following items represent design boundaries established to comply with offline sandbox constraints and API key restrictions:
+1. **Rule-Based Triage Planner**: The triage engine uses a deterministic regex parser and policy lookup rather than an external LLM API (such as OpenAI/Anthropic). This eliminates token cost overhead, connectivity errors, and API credential issues.
+2. **Heuristic Sentiment Trend**: The `/analytics/sentiment-trend` endpoint evaluates email customer sentiment timelines using category/urgency mappings rather than a live machine learning model.
+3. **Mock Reputation Intelligence**: The `/intelligence/reputation` endpoint provides cached review ratings and threat reports for G2 and Trustpilot queries. It does not perform active scraping on real websites to bypass sandboxed firewall blocks.
+4. **Scope Exclusions**: SMTP mail triggers and database level event triggers are not implemented. Action executions are stored as status logs.
+
+---
+
+## 12. Final Assessment Audit Report
+
+For a complete checklist of requirement coverage, scenario validations, and automatic disqualifier checks, refer to the [FINAL_AUDIT.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/FINAL_AUDIT.md) document in the workspace.
+
