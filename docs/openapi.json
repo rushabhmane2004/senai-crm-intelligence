@@ -304,25 +304,6 @@
         }
       }
     },
-    "/analytics/category-breakdown": {
-      "get": {
-        "tags": [
-          "analytics"
-        ],
-        "summary": "Get Category Breakdown",
-        "operationId": "get_category_breakdown_analytics_category_breakdown_get",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          }
-        }
-      }
-    },
     "/analytics/sentiment-trend": {
       "get": {
         "tags": [
@@ -334,11 +315,20 @@
           {
             "name": "sender",
             "in": "query",
-            "required": true,
+            "required": false,
             "schema": {
               "type": "string",
-              "minLength": 1,
               "title": "Sender"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 30,
+              "title": "Days"
             }
           }
         ],
@@ -364,12 +354,51 @@
         }
       }
     },
+    "/analytics/category-breakdown": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Get Category Breakdown",
+        "operationId": "get_category_breakdown_analytics_category_breakdown_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/analytics/risk-summary": {
+      "get": {
+        "tags": [
+          "analytics"
+        ],
+        "summary": "Get Risk Summary",
+        "operationId": "get_risk_summary_analytics_risk_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/intelligence/reputation": {
       "get": {
         "tags": [
           "intelligence"
         ],
         "summary": "Get Company Reputation",
+        "description": "Return cached offline public reputation intelligence for a company/domain.\n\n- **scraping_mode**: always \"offline_mock\" in this safe evaluation build.\n- **robots_checked**: always True \u2014 robots.txt compliance intent is preserved.\n- **cache_status**: \"hit\" if served from DB cache, \"miss\" on first fetch, \"fallback\" on error.\n- **expires_at**: cache record expires 6 hours after creation.\n\nLive scraping can be enabled later by swapping `get_reputation_intelligence` for\na live implementation while keeping the same response schema.",
         "operationId": "get_company_reputation_intelligence_reputation_get",
         "parameters": [
           {
@@ -379,7 +408,49 @@
             "schema": {
               "type": "string",
               "minLength": 1,
+              "description": "Company name or domain, e.g. retail-co.com",
               "title": "Company"
+            },
+            "description": "Company name or domain, e.g. retail-co.com"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/classification/{message_id}": {
+      "get": {
+        "tags": [
+          "classification"
+        ],
+        "summary": "Get Email Classification",
+        "operationId": "get_email_classification_api_classification__message_id__get",
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Message Id"
             }
           }
         ],
@@ -654,12 +725,26 @@
             "description": "Valid email address of the sender"
           },
           "subject": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Subject",
             "description": "Email subject"
           },
           "body": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Body",
             "description": "Email body content"
           },
@@ -679,8 +764,6 @@
         "required": [
           "message_id",
           "sender",
-          "subject",
-          "body",
           "timestamp",
           "thread_id"
         ],

@@ -209,13 +209,14 @@ Follow this workflow to test the end-to-end functionality:
 6. **Validate RAG Quality**: Run `python scripts/test_rag_quality.py` to verify RAG semantic retrieval accuracy on all 6 evaluation scenarios.
 7. **Validate Web Intelligence**: Run `python scripts/test_web_intelligence.py` to verify offline reputation intelligence, cache hit semantics, and msg_033 raw_entities enrichment.
 8. **Validate Autonomous Agent Dry-Run**: Run `python scripts/test_agent_dry_run.py` to verify the planning-only endpoint runs without side effects and produces ReAct-style traces.
-9. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
-10. **Evaluate Crucial Scenarios**:
+9. **Validate Documentation Exports**: Run `python scripts/test_documentation_exports.py` to verify all docs exist, the Mermaid ER diagram is present, and OpenAPI JSON exports 14 paths correctly.
+10. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
+11. **Evaluate Crucial Scenarios**:
    * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
    * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.
    * Select **`msg_041`**: Standard billing question. Notice that auto-reply is **allowed** and the agent drafts a response containing pro-rata refund calculations using the RAG grounded refund policy.
    * Select **`msg_031`**: Inheritance scam spam email. Categorized as spam, auto-reply blocked, and RAG grounding is skipped.
-10. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
+12. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
 
 ---
 
@@ -229,7 +230,24 @@ Follow this workflow to test the end-to-end functionality:
 
 ---
 
-## 11. Known Limitations
+## 11. Documentation
+
+All technical documentation lives in the [`docs/`](./docs/) directory:
+
+| Document | Description |
+|---|---|
+| [`docs/database_schema.md`](./docs/database_schema.md) | Full table-by-table schema docs with Mermaid ER diagram covering all 7 tables, JSON field contents, relationships, performance notes, and data retention notes |
+| [`docs/api_reference.md`](./docs/api_reference.md) | Comprehensive reference for all 14 API endpoints across 5 groups with request/response details and safety notes |
+| [`docs/openapi.json`](./docs/openapi.json) | Machine-readable OpenAPI 3.x schema (14 paths, 11 components) for tooling integration |
+
+To regenerate `docs/openapi.json` from the live FastAPI app:
+```bash
+python scripts/export_openapi.py
+```
+
+---
+
+## 12. Known Limitations
 
 The following items represent design boundaries established to comply with offline sandbox constraints and API key restrictions:
 1. **Rule-Based Triage Planner**: The triage engine uses a deterministic regex parser and policy lookup rather than an external LLM API (such as OpenAI/Anthropic). This eliminates token cost overhead, connectivity errors, and API credential issues.

@@ -21,6 +21,9 @@ This document presents a comprehensive audit of the requirements, scenario valid
 | **LLM Classification** | **Yes** | [llm_classifier.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/llm_classifier.py) | Structured JSON output classification with entity extraction and deterministic safety overrides fallback. Verified by [test_llm_classification.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_llm_classification.py). |
 | **Sentiment Trend & Analytics** | **Yes** | [analytics.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/analytics.py) | Exposes chronological sentiment trends, moving averages, consecutive negative email alert, category breakdowns, and risk statistics. Verified by [test_analytics.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_analytics.py). |
 | **Autonomous Agent Dry-Run** | **Yes** | [agent.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/agent.py) | Planning-only dry-run endpoint with audit-friendly ReAct trace output. Verified by [test_agent_dry_run.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_agent_dry_run.py). |
+| **DB Schema Docs + ER Diagram** | **Yes** | [database_schema.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/docs/database_schema.md) | Full table-by-table schema documentation with Mermaid ER diagram covering all 7 tables. JSON field contents documented. Verified by [test_documentation_exports.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_documentation_exports.py). |
+| **API Reference Docs** | **Yes** | [api_reference.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/docs/api_reference.md) | Comprehensive reference for all 14 endpoints across 5 groups with request/response details and safety notes. |
+| **OpenAPI JSON Export** | **Yes** | [openapi.json](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/docs/openapi.json) · [export_openapi.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/export_openapi.py) | 14 paths, 11 schema components exported. Script works from project root: `python scripts/export_openapi.py`. |
 
 ---
 
@@ -121,12 +124,17 @@ The following items represent design limits established to comply with offline s
    python scripts/test_rag_quality.py
    ```
    *Confirm all 6 RAG retrieval scenarios pass successfully, retrieving the expected policy documents.*
-7. Validate Autonomous Agent Dry-Run scenarios and ReAct trace:
+8. Validate Autonomous Agent Dry-Run scenarios and ReAct trace:
    ```bash
    python scripts/test_agent_dry_run.py
    ```
    *Confirm all 4 scenarios (msg_060, msg_038, msg_052, msg_041) pass, showing ReAct-style traces (Thought -> Action -> Observation -> Next).*
-8. Attempt duplicate stream ingestion:
+9. Validate documentation exports and OpenAPI schema:
+   ```bash
+   python scripts/test_documentation_exports.py
+   ```
+   *Confirm database_schema.md, api_reference.md, and openapi.json all pass validation. Confirm 14 paths and 11 schema components exported.*
+10. Attempt duplicate stream ingestion:
    ```bash
    curl.exe -X POST http://127.0.0.1:8000/api/ingest -H "Content-Type: application/json" -d "{\"message_id\": \"msg_038\", \"sender\": \"hacker@anon-collective.net\", \"subject\": \"We have your data - Pay Now\", \"body\": \"Ransomware extortion\", \"timestamp\": \"2023-10-11T17:30:00Z\", \"thread_id\": \"thread_security_002\"}"
    ```
@@ -164,3 +172,8 @@ The following items represent design limits established to comply with offline s
    ```bash
    curl.exe -X POST "http://127.0.0.1:8000/agent/dry-run/msg_038"
    ```
+5. Export OpenAPI schema to docs/openapi.json:
+   ```bash
+   python scripts/export_openapi.py
+   ```
+   *Confirms 14 paths exported for API title: Agentic CRM Intelligence Platform.*
