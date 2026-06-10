@@ -150,6 +150,7 @@ To load markdown files into the ChromaDB vector database:
 ```bash
 python scripts/seed_kb.py
 ```
+*(Note: The KB policies are intentionally concise, so each document may generate only one or a few chunks. Retrieval is validated by source-document correctness).*
 
 ### 3. Running the Streaming Simulator
 To stream advanced emails simulating real-time operations:
@@ -203,13 +204,14 @@ Follow this workflow to test the end-to-end functionality:
 3. **Stream Emails**: Execute `python scripts/stream_emails.py --speed 10`. This ingests over 60 simulated emails into the database.
 4. **Validate LLM Classification**: Execute `python scripts/test_llm_classification.py` to verify structured outputs, entity extraction, and safety overrides.
 5. **Validate Sentiment Trend & Analytics**: Run `python scripts/test_analytics.py` to verify categories, trends, risk, and regression safety.
-6. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
-7. **Evaluate Crucial Scenarios**:
+6. **Validate RAG Quality**: Run `python scripts/test_rag_quality.py` to verify RAG semantic retrieval accuracy on all 6 evaluation scenarios.
+7. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
+8. **Evaluate Crucial Scenarios**:
    * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
    * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.
    * Select **`msg_041`**: Standard billing question. Notice that auto-reply is **allowed** and the agent drafts a response containing pro-rata refund calculations using the RAG grounded refund policy.
    * Select **`msg_031`**: Inheritance scam spam email. Categorized as spam, auto-reply blocked, and RAG grounding is skipped.
-8. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
+9. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
 
 ---
 

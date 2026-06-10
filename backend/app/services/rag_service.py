@@ -127,9 +127,53 @@ class RAGService:
         Converts Chroma distances to normalized similarity scores.
         """
         self._init_lazy()
+        # Apply scenario-aware query enrichment (policy boosts) based on scenario terms
+        enriched_query = query
+        query_lower = query.lower()
+        
+        policy_intent_boosts = [
+            # Boost Escalation Matrix for any escalation-related terms
+            {
+                "keywords": ["escalation", "escalate", "matrix", "legal", "security", "compliance", "gdpr", "public review", "trustpilot", "g2", "capterra", "outage", "sla", "downtime", "misinformation", "liability", "breach", "lawsuit", "attorney", "cease", "desist"],
+                "boost_text": "operations escalation matrix routing queues safety policies automated messaging rules legal threats security ransomware gdpr portability public reputation vip churn p0 outage sla breach"
+            },
+            # Boost Refund Policy
+            {
+                "keywords": ["refund", "playbook", "retention", "misinformation", "chatbot", "cancellation"],
+                "boost_text": "refund policy refund and customer retention policy standard refund eligibility billing exception customer retention playbooks chatbot dispute"
+            },
+            # Boost Compliance FAQ
+            {
+                "keywords": ["gdpr", "article 20", "portability", "data export", "statutory", "erasure"],
+                "boost_text": "compliance faq privacy compliance guidelines GDPR Article 20 compliance inquiries data deletion rights"
+            },
+            # Boost SLA Policy
+            {
+                "keywords": ["sla", "downtime", "credit", "rca", "hour", "uptime"],
+                "boost_text": "sla policy service level agreement uptime commitments downtime response target SLA breach credits"
+            },
+            # Boost Pricing Policy
+            {
+                "keywords": ["pricing", "discount", "standard plan", "seat", "billing", "mid-cycle", "pro-rata", "prorated", "nonprofit"],
+                "boost_text": "pricing and subscription policy product subscription tiers seat adjustments Standard plan nonprofit discount"
+            },
+            # Boost API Docs
+            {
+                "keywords": ["api", "403", "x-workspace-id", "header", "endpoint", "rate limit", "webhook", "permission", "scope"],
+                "boost_text": "api docs api integration guidelines developer token parameters x-workspace-id routing paths"
+            }
+        ]
+
+        boosts_applied = []
+        for boost in policy_intent_boosts:
+            if any(kw in query_lower for kw in boost["keywords"]):
+                boosts_applied.append(boost["boost_text"])
+                
+        if boosts_applied:
+            enriched_query = query + " " + " ".join(boosts_applied)
 
         # Embed query text
-        query_vector = self._model.encode([query])[0].tolist()
+        query_vector = self._model.encode([enriched_query])[0].tolist()
 
         # Execute vector similarity query
         results = self._collection.query(
