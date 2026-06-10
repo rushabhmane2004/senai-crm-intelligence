@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field, EmailStr
 class EmailIngestPayload(BaseModel):
     message_id: str = Field(..., description="Unique message identifier")
     sender: EmailStr = Field(..., description="Valid email address of the sender")
-    subject: str = Field(..., description="Email subject")
-    body: str = Field(..., description="Email body content")
+    subject: Optional[str] = Field(None, description="Email subject")
+    body: Optional[str] = Field(None, description="Email body content")
     timestamp: datetime = Field(..., description="Timestamp of when the email was sent")
     thread_id: str = Field(..., description="External thread identifier")
 

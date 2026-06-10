@@ -102,19 +102,22 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         )
 
     # 2. Normalize whitespace and handle empty values
-    clean_subject = normalize_whitespace(payload.subject)
+    subj_str = payload.subject.strip() if payload.subject else ""
+    clean_subject = normalize_whitespace(subj_str)
     if not clean_subject:
         clean_subject = "(No Subject)"
 
-    clean_body = normalize_whitespace(payload.body)
+    body_str = payload.body.strip() if payload.body else ""
+    clean_body = normalize_whitespace(body_str)
     if not clean_body:
-        clean_body = "[Empty body]"
+        clean_body = ""
 
-    # 3. Check for body truncation (max 10000 characters)
+    # 3. Check for body truncation (max 10000 characters) for AI processing
     is_truncated = False
     original_length = len(clean_body)
-    if original_length > 10000:
-        clean_body = clean_body[:10000]
+    ai_body = clean_body
+    if len(clean_body) > 10000:
+        ai_body = clean_body[:10000]
         is_truncated = True
 
     # 4. Link or create thread
@@ -177,7 +180,7 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
 
 
     # 6. Classify email using the rule-based heuristic classifier
-    heuristic_res = classify_email_heuristically(payload.sender, clean_subject, clean_body)
+    heuristic_res = classify_email_heuristically(payload.sender, clean_subject, ai_body)
 
     # 7. Evaluate RAG grounding
     from types import SimpleNamespace
@@ -191,12 +194,13 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         "escalation_reason": heuristic_res["escalation_reason"],
         "heuristic_result": heuristic_res,
         "subject": clean_subject,
-        "body": clean_body
+        "body": ai_body,
+        "long_body_truncated": is_truncated
     }
 
     dummy_email = SimpleNamespace(
         subject=clean_subject,
-        body=clean_body,
+        body=ai_body,
         category=heuristic_res["category"],
         urgency=heuristic_res["urgency"],
         status=heuristic_res["status"],
