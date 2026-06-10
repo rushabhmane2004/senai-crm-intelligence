@@ -1,426 +1,204 @@
-# Agentic CRM Intelligence Platform
+# Agentic CRM Intelligence Platform & Real-Time Email Operations System
 
-A production-grade Agentic CRM Intelligence Platform and Real-Time Email Operations System designed for automated lead qualification, support routing, security alerts ingestion, and customer analytics.
-
----
-
-## Phase 1 Overview: Backend Foundation & Ingestion
-
-Phase 1 establishes the core backend architectures, database models, request validations, data normalization pipeline, contact thread linking, and automated priority heuristics. It includes a multi-threaded streaming simulation script mimicking real-time customer and client interactions.
-
-### Completed Features
-
-1. **FastAPI Web Framework**:
-   * Clean, modular routes registration for ingestion, dashboards, statuses, and contact history.
-   * CORS middleware initialized for cross-origin frontend requests.
-   * Global exception interceptors mapping standard Pydantic validation errors and HTTP exceptions into a consistent error response envelope.
-   * Root `/health` status endpoint.
-
-2. **Database Schema & Models**:
-   * **`contacts`**: Stores profiles, lifecycle status (`VIP`, `Blocked`, `Active`, `Churned`), account valuation, and metadata.
-   * **`threads`**: Groups communications. Connects incoming messages logically.
-   * **`emails`**: Real-time email ingestion rows. Connects to `threads.id`. Includes priority scores and sentiment parameters.
-   * **`actions`**: Captures proposed AI replies, reasons, and approvals.
-   * **`audit_log`**: Records audit tracks of internal processing, changes, and database modifications.
-
-3. **Email Ingestion Engine (`POST /api/ingest`)**:
-   * Normalizes incoming subject and body whitespace.
-   * Gracefully falls back to defaults for empty subjects and bodies.
-   * Automates message deduplication using `message_id` hashes to prevent message double-processing (`duplicate_ignored`).
-   * Truncates message body payloads to `10,000` characters if they exceed limits, flagging the audit logs.
-   * Assigns initial priority scores (`0` to `3`) using keyword heuristics:
-     * **Critical (3)**: `ransomware`, `legal`, `cease and desist`, `p0`, `production down`, `breach`, `gdpr`.
-     * **High (2)**: `urgent`, `refund`, `outage`, `escalation`, `public review`, `trustpilot`, `g2`.
-     * **Medium (1)**: `bug`, `issue`, `deadline`, `failed`, `compliance`, `rfp`.
-     * **Low (0)**: Default priority level.
-   * Updates contact profiles (`last_contact_at`).
-
-4. **Real-time Streaming Simulator (`scripts/stream_emails.py`)**:
-   * Reads high-fidelity JSON files.
-   * Submits payloads to the ingestion pipeline.
-   * Supports speed configurations via command-line arguments.
-   * Gracefully catches and formats operational API errors.
+An AI-powered CRM operations platform that ingests customer emails, classifies risk, retrieves internal policy context with RAG, and produces auditable safe action plans.
 
 ---
 
-## Technical Stack
-* **Backend**: Python 3.10+ (FastAPI)
-* **Web Server**: Uvicorn
-* **Database**: PostgreSQL 15
-* **ORM**: SQLAlchemy
-* **Validation**: Pydantic v2
-* **Containerization**: Docker & Docker Compose
+## 1. Project Overview & Key Features
+
+This platform is a production-grade operations system designed to ingest high-throughput support tickets, legal disputes, billing inquiries, and security incidents. It combines rule-based heuristics with retrieval-augmented generation (RAG) and an LLM-based safe action planner to execute decisions safely and transparently.
+
+### Key Features
+* **Real-time Email Ingestion Simulation**: Streams customer payloads with metadata (message IDs, custom threads, timestamps).
+* **PostgreSQL Persistence**: Stores normalized profiles, thread histories, email states, and audit trails.
+* **`message_id` Deduplication**: Prevents double-processing of identical message IDs (`duplicate_ignored`).
+* **Thread Linking & Contact History**: Groups related messages into threads, automatically updating customer profile metrics (churn risk, account valuation).
+* **Heuristic Classification**: Performs immediate tagging of categorizations, SLA urgencies, priority scoring, and initial routing.
+* **Policy-Grounded RAG**: Automatically queries a local vector store containing company knowledge base guidelines to ground responses.
+* **Knowledge Base Documents**: Pre-loaded system policies regarding SLA commitments, security matrix, billing, and GDPR compliance.
+* **Triage Agent Reasoning Trace**: Generates step-by-step reasoning logs detailing findings, policies applied, and final decisions.
+* **Safe Auto-Reply Decisioning**: Restricts auto-replies or auto-execution based on safety classifications (safe, restricted, blocked).
+* **Frontend Dashboard**: A professional dark React dashboard featuring interactive stats, critical escalation queue, email inspector, trace loggers, and timeline.
+* **Critical Escalation Queue**: Auto-flags high-priority/escalated tickets for human inspection and team hand-offs.
 
 ---
 
-## Setup & Running Guide
+## 2. Architecture & Data Flow
 
-### 1. Locally (with SQLite fallback)
+```
+email-data-advanced.json
+        ↓
+stream_emails.py
+        ↓
+FastAPI /api/ingest
+        ↓
+PostgreSQL persistence + deduplication
+        ↓
+Heuristic classifier
+        ↓
+Conditional RAG retrieval
+        ↓
+Triage agent + safe action planner
+        ↓
+Actions table + audit trace
+        ↓
+React dashboard
+```
 
-For quick development iteration, the backend automatically falls back to a SQLite database when no external Postgres connection is provided.
+---
 
-1. **Create Virtual Environment**:
+## 3. Technical Stack
+
+### Backend
+* **FastAPI**: Main web services frameworks, routers, and CORS middleware.
+* **SQLAlchemy**: ORM database schema representation.
+* **PostgreSQL / SQLite**: Data storage and thread relationship tracking.
+* **Pydantic**: Consistent response validation and strict schemas.
+* **ChromaDB**: Native Vector Store hosting company documents.
+* **sentence-transformers (`all-MiniLM-L6-v2`)**: Dense embedding generations.
+
+### Frontend
+* **React**: Core UI components.
+* **Vite**: Rapid hot-reloading development and assets compilation.
+* **CSS**: Clean custom-styled dark theme variables, responsive grids, and interactive badges.
+
+### AI & RAG
+* **ChromaDB vector store**: Local DB instances.
+* **Embeddings**: Sentence Transformer embeddings mapping.
+* **Markdown Policy Knowledge Base**: Documents for grounding.
+
+---
+
+## 4. Knowledge Base Policies
+The platform grounds CRM actions against the following company markdown policies stored in `kb/`:
+1. **[kb/pricing_policy.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/pricing_policy.md)**: Product pricing rules, multi-user tier structures, and retention discounts.
+2. **[kb/sla_policy.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/sla_policy.md)**: Support tier response deadlines, SLA breaches, and service credits.
+3. **[kb/refund_policy.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/refund_policy.md)**: Refund eligibility limits, 14-day money-back guarantee, and billing adjustments.
+4. **[kb/api_docs.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/api_docs.md)**: Technical integration guidelines, developer token parameters, and routing paths.
+5. **[kb/compliance_faq.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/compliance_faq.md)**: Privacy compliance guidelines, GDPR inquiries, and data deletion rights.
+6. **[kb/escalation_matrix.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/escalation_matrix.md)**: Escalation team routing policies and strict auto-messaging safety rules.
+
+---
+
+## 5. Safety Rules & Auto-Reply Decisions
+
+The platform enforces strict safe-action rules to mitigate legal, security, and privacy risks:
+* **No Auto-Reply for Ransomware / Security Extortion**: Restricts messaging to prevent interacting with bad actors.
+* **No Auto-Reply for Legal Threats**: Escalates immediately to the Legal team, freezing automated threads.
+* **No Generic Auto-Reply for GDPR / Article 20 requests**: Compliance cases are blocked from auto-replies, requiring manual verification of data exports.
+* **Spam is Ignored**: Automatically identified junk mail skips RAG grounding pipelines and is flagged for archiving.
+* **Safe Billing / Pricing inquiries**: Permitted to automatically draft response templates using retrieved KB constraints.
+
+---
+
+## 6. Critical Scenario Validation
+
+The following validation states are processed dynamically:
+
+| Message ID | Category | Urgency | Status | Safety Decision | Escalation Queue |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **msg_038** | Security | Critical | Escalated | Auto-reply blocked | security |
+| **msg_052** | Compliance | Critical | Escalated | Auto-reply blocked | compliance |
+| **msg_020** | Legal | Critical | Escalated | Auto-reply blocked | legal |
+| **msg_060** | Support | Critical | Escalated | Auto-reply blocked | legal |
+| **msg_041** | Billing | Medium | Processing | Auto-reply allowed | billing |
+| **msg_031** | Spam | Low | Spam | Auto-reply blocked | none |
+
+---
+
+## 7. Setup & Run Instructions
+
+### 1. Backend Setup
+1. **Navigate and Create Environment**:
    ```bash
-   python -m venv .venv
-   .venv\Scripts\activate      # Windows
-   source .venv/bin/activate    # macOS/Linux
+   cd backend
+   python -m venv venv
    ```
-
-2. **Install Dependencies**:
+2. **Activate Environment**:
+   * **Windows**: `venv\Scripts\activate`
+   * **macOS/Linux**: `source venv/bin/activate`
+3. **Install Dependencies**:
    ```bash
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    ```
-
-3. **Configure Settings**:
-   Create a local `.env` in the root workspace folder:
+4. **Configure Environment variables**:
+   Create a `.env` file in the root backend directory:
    ```env
-   DATABASE_URL=sqlite:///./senai_crm.db
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/senai_crm
    BACKEND_PORT=8000
    ```
-
-4. **Start the FastAPI Backend**:
+   *(Note: If no PostgreSQL configuration is supplied, the server falls back to SQLite `sqlite:///./senai_crm.db` automatically for ease of local testing).*
+5. **Start backend application**:
    ```bash
-   python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
-   ```
-   * Swagger documentation is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
-   * Health endpoint is available at [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health).
-
-5. **Run the Streaming Simulator**:
-   ```bash
-   # Stream at speed multiplier 1 (1 email per second)
-   python scripts/stream_emails.py --speed 1
+   uvicorn app.main:app --reload --port 8000
    ```
 
----
-
-### 2. Using Docker Compose (with PostgreSQL)
-
-To test a production-like environment with persistent PostgreSQL storage:
-
-1. **Configure Environment Variables**:
-   Copy `.env.example` to `.env`:
-   ```bash
-   copy .env.example .env
-   ```
-
-2. **Build and Launch Container Stack**:
-   ```bash
-   docker-compose up --build -d
-   ```
-   This spins up:
-   * **`crm_postgres`**: Local PostgreSQL database mapped to port `5432` with a persistent volume named `pgdata`.
-   * **`crm_backend`**: FastAPI backend mapped to port `8000`. It waits until PostgreSQL is fully healthy.
-
-3. **Stream Emails into the Container Backend**:
-   ```bash
-   python scripts/stream_emails.py --speed 2
-   ```
-
-4. **Stop Container Stack**:
-   ```bash
-   docker-compose down -v
-   ```
-
----
-
-### 3. Running the Frontend Dashboard
-
-A professional, high-end dark React/Vite dashboard is available inside the `frontend/` directory to visualize stats, queues, agent reasoning traces, policy grounding, and auto-reply safeties in real-time.
-
-1. **Navigate to Frontend Directory**:
-   ```bash
-   cd frontend
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   npm install
-   ```
-
-3. **Start the Frontend Development Server**:
-   ```bash
-   npm run dev
-   ```
-   * The application will run locally (typically at [http://localhost:5173](http://localhost:5173)).
-   * The backend endpoint URL can be customized in `frontend/.env` via the `VITE_API_BASE_URL` setting.
-
----
-
-## API Documentation
-
-### 1. Ingest Email (`POST /api/ingest`)
-
-**Request Payload**:
-```json
-{
-  "message_id": "msg_002",
-  "sender": "bob.jones@enterprise.net",
-  "subject": "URGENT: Production System Down",
-  "body": "Our production server is not responding since 08:50 UTC. We need support immediately. This is a P0 incident.",
-  "timestamp": "2023-10-01T09:15:00Z",
-  "thread_id": "thread_bob_outage"
-}
-```
-
-**Response (New Ingest)**:
-```json
-{
-  "email_id": 2,
-  "message_id": "msg_002",
-  "thread_id": "thread_bob_outage",
-  "status": "Received",
-  "priority_score": 3
-}
-```
-
-**Response (Duplicate Ignored)**:
-```json
-{
-  "email_id": 2,
-  "message_id": "msg_002",
-  "thread_id": "thread_bob_outage",
-  "status": "duplicate_ignored",
-  "priority_score": 3
-}
-```
-
-### 2. Contact Threads History (`GET /threads/{contact_email}`)
-
-Returns the user profile, all group communication threads, chronological list of emails, and details of actions proposed or performed on their behalf.
-
-**Response**:
-```json
-{
-  "contact": {
-    "id": 1,
-    "email": "alice.smith@greenlight-npo.org",
-    "name": null,
-    "company": null,
-    "status": "Active",
-    "account_value": 0.0,
-    "churn_risk_score": 0.0,
-    "created_at": "2026-06-09T14:25:09",
-    "last_contact_at": "2026-06-09T14:26:35.628932"
-  },
-  "threads": [
-    {
-      "id": 1,
-      "thread_id": "thread_alice_pricing",
-      "subject": "Question about pricing",
-      "sender_email": "alice.smith@greenlight-npo.org",
-      "first_seen_at": "2023-10-01T09:00:00",
-      "last_updated_at": "2026-06-09T14:26:35.626932",
-      "status": "Open",
-      "assigned_to": null,
-      "emails": [
-        {
-          "id": 1,
-          "thread_id": 1,
-          "message_id": "msg_001",
-          "sender": "alice.smith@greenlight-npo.org",
-          "subject": "Question about pricing",
-          "body": "Hi, I was looking at your enterprise plan. Do you offer discounts for non-profits? We are a registered 501(c)(3) and work with underserved communities.",
-          "timestamp": "2023-10-01T09:00:00",
-          "priority_score": 0,
-          "sentiment_score": null,
-          "category": null,
-          "urgency": null,
-          "requires_human": null,
-          "confidence": null,
-          "raw_entities": null,
-          "status": "Received",
-          "created_at": "2026-06-09T14:25:09",
-          "actions": []
-        }
-      ]
-    }
-  ]
-}
-```
-
-### 3. Dashboard Stats (`GET /dashboard/stats`)
-
-Returns counts of total emails, pending tasks (Received or Processing status), spam items, escalated threads, critical queries, contacts, and active conversations.
-
-**Response**:
-```json
-{
-  "total_emails": 60,
-  "pending_emails": 60,
-  "spam_emails": 0,
-  "escalated_emails": 0,
-  "critical_emails": 4,
-  "total_contacts": 48,
-  "total_threads": 47
-}
-```
-
-### 4. Consistent Error Envelope
-
-All API errors return a standard envelope schema:
-
-**Example validation error (HTTP 422)**:
-```json
-{
-  "error_code": "VALIDATION_ERROR",
-  "message": "Invalid email payload",
-  "details": {
-    "body.sender": "value is not a valid email address: An email address must have an @-sign."
-  }
-}
-```
-
-**Example not found error (HTTP 404)**:
-```json
-{
-  "error_code": "NOT_FOUND",
-  "message": "Email with message_id 'msg_nonexistent' not found",
-  "details": {}
-}
-```
-
----
-
-## Phase 2: Heuristic Classification Engine
-
-Phase 2 introduces a rule-based deterministic classifier executing synchronously during ingestion (`POST /api/ingest`). It checks messages for patterns and security/legal risks before any downstream LLM or agent workflows.
-
-### Sequential Evaluation Rules
-The classifier scans sender addresses and combined subjects/bodies in a strict priority order:
-1. **Security**: Triggers `Security` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `100`.
-2. **Legal**: Triggers `Legal` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `95`.
-3. **GDPR / Compliance legal**: Triggers `Compliance` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `95`.
-4. **Internal**: Triggers `Internal` category, `Low` urgency, `Ignored` status, `requires_human` = false, and priority score `10`.
-5. **Spam**: Triggers `Spam` category, `Low` urgency, `Spam` status, `requires_human` = false, and priority score `5`.
-6. **P0 Outage**: Triggers `Complaint` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `90`.
-7. **Reputation / Churn**: Triggers `Complaint` category, `High` urgency, `Escalated` status, `requires_human` = true, and priority score `85`.
-8. **Refund / Angry Complaint**: Triggers `Complaint` category, `High` urgency, `Escalated` status, `requires_human` = true, and priority score `80`.
-9. **Bug Report**: Triggers `Bug Report` category, `Medium` urgency, `Processing` status, `requires_human` = true, and priority score `60`.
-10. **Compliance**: Triggers `Compliance` category, `High` urgency, `Escalated` status, `requires_human` = true, and priority score `75`.
-11. **Billing**: Triggers `Billing` category, `Medium` urgency, `Processing` status, `requires_human` = false, and priority score `50`.
-12. **Pricing / Sales Inquiry**: Triggers `Inquiry` category, `Medium` urgency, `Processing` status, `requires_human` = false, and priority score `45`.
-13. **Feature Request**: Triggers `Feature Request` category, `Low` urgency, `Processing` status, `requires_human` = false, and priority score `30`.
-14. **Default (Other)**: Triggers `Other` category, `Low` urgency, `Processing` status, `requires_human` = false, and priority score `20`.
-
-### Expected Verification Results
-
-* **`msg_038`** (Ransomware threat) -> Category: `Security`, Urgency: `Critical`, Status: `Escalated`, Priority: `100`, Requires Human: `true`.
-* **`msg_052`** (GDPR Article 20 request) -> Category: `Compliance`, Urgency: `Critical`, Status: `Escalated`, Priority: `95`, Requires Human: `true`.
-* **`msg_020`** (Cease and desist legal notice) -> Category: `Legal`, Urgency: `Critical`, Status: `Escalated`, Priority: `95`, Requires Human: `true`.
-* **`msg_060`** (SLA breach + legal escalation) -> Category: `Legal`, Urgency: `Critical`, Status: `Escalated`, Priority: `95`, Requires Human: `true` (specifically excludes matching the generic Security `breach` rule due to `SLA breach` check).
-* **`msg_033`** (Public review / churn threat) -> Category: `Complaint`, Urgency: `High`, Status: `Escalated`, Priority: `85`, Requires Human: `true`.
-* **`msg_003`**, **`msg_031`**, **`msg_039`** -> Category: `Spam`, Status: `Spam`, Priority: `5`.
-* **`msg_017`**, **`msg_035`** -> Category: `Internal`, Status: `Ignored`, Priority: `10`.
-
----
-
-## Phase 3: Production-Minded RAG Knowledge Pipeline
-
-Phase 3 implements a local vector storage and semantic lookup pipeline using ChromaDB and local sentence embeddings (`sentence-transformers/all-MiniLM-L6-v2`) to anchor AI decisions and routing recommendations in internal policies.
-
-### Business-Driven Grounding Architecture
-> [!IMPORTANT]
-> **RAG is used as a policy-grounding layer, not as a universal search step.**
-> The system avoids retrieval for spam/internal/low-risk emails to reduce latency, control costs, and avoid adding irrelevant context. Retrieval is triggered only when the action depends on internal policy, compliance rules, contractual obligations, or escalation ownership.
-
-* **Excluded from RAG**:
-  * Category is `Spam` or `Internal`.
-  * Category is `Other` with `Low` urgency.
-* **Eligible for RAG**:
-  * Category is `Legal`, `Compliance`, `Security`, `Billing`, `Complaint`, or `Inquiry`.
-  * Category is `Bug Report` and text mentions API keywords (`api`, `v2`, `endpoint`, `403`, `rate limit`, `webhook`).
-  * Any ticket with status `Escalated` (excluding Spam/Internal).
-
----
-
-### Seeding and Managing the Knowledge Base
-
-Policy files are stored under `/kb`:
-1. `pricing_policy.md` - Subscriptions, seats, pro-rata, non-profit discounts, upgrade policies.
-2. `sla_policy.md` - 99.9% uptime commitments, P0 RCA targets (24 hours), credits, escalation paths.
-3. `refund_policy.md` - 14-day window, exceptions, reputation crisisCS escalation, chatbot misinformation safety rule.
-4. `api_docs.md` - v1 deprecation, v2 endpoints, webhook specs, X-Workspace-ID header requirements.
-5. `compliance_faq.md` - SOC 2 Type II, HIPAA BAA availability, GDPR Article 20 exports (30-day window).
-6. `escalation_matrix.md` - specialized routing queues (Security, Legal, GDPR, VIP Churn) and safety guidelines (e.g., Never auto-reply to ransomware/extortion).
-
-#### Seeding Command
-Ensure dependencies are installed and run the seeding script:
+### 2. Seed Vector Database (RAG)
+To load markdown files into the ChromaDB vector database:
 ```bash
 python scripts/seed_kb.py
 ```
-This script initializes tables, reads all files under `/kb`, splits them into semantic chunks of ~300-500 tokens, calculates embeddings, indexes them under Chroma (`backend/chroma_store`), and updates the database catalog table (`knowledge_chunks`) checking unique hashes to avoid duplicates.
 
----
-
-### RAG Operations & API Endpoints
-
-1. **Vector Search API (`GET /rag/search`)**:
-   Query the knowledge base via the debug endpoint:
-   ```bash
-   GET /rag/search?q=refund public review escalation&top_k=3
-   ```
-2. **In-Flight Grounding during Ingestion**:
-   When an incoming email qualifies for RAG, a targeted query is constructed and the top 3 policy citations are embedded inside the `raw_entities` column:
-   ```json
-   "rag_used": true,
-   "rag_query": "refund policy exception service failure retention playbook",
-   "rag_context": [
-     {
-       "source_doc": "refund_policy.md",
-       "policy_ref": "refund_policy.md#chunk-0",
-       "similarity_score": 0.478,
-       "chunk_preview": "# Refund and Customer Retention Policy..."
-     }
-   ]
-   ```
-   *If the RAG service fails (due to model loading or vector store read issues), the email ingestion does not block; it registers the failure in an `AuditLog` entry, appends `rag_error` in `raw_entities`, and successfully finishes ingestion.*
-
----
-
-### Verification and Test Queries
-
-Run verification queries using the provided helper:
+### 3. Running the Streaming Simulator
+To stream advanced emails simulating real-time operations:
 ```bash
-python scripts/verify_rag.py
+python scripts/stream_emails.py --speed 10
 ```
 
-Expected search results:
-1. **Query**: `refund public review escalation`
-   * Returns: `refund_policy.md`, `escalation_matrix.md`
-2. **Query**: `GDPR Article 20 data portability 30-day statutory window`
-   * Returns: `compliance_faq.md`, `escalation_matrix.md`
-3. **Query**: `SLA breach RCA 24 hours downtime credit`
-   * Returns: `sla_policy.md`, `escalation_matrix.md` (or top policy chunks)
-4. **Query**: `API v2 403 X-Workspace-ID`
-   * Returns: `api_docs.md`
-5. **Query**: `nonprofit discount pro-rata billing`
-   * Returns: `pricing_policy.md`
-6. **Query**: `ransomware never auto-reply escalation`
-   * Returns: `escalation_matrix.md`
+### 4. Frontend Setup
+1. **Navigate and Install**:
+   ```bash
+   cd frontend
+   npm install
+   ```
+2. **Configure Settings**:
+   Create `frontend/.env` file:
+   ```env
+   VITE_API_BASE_URL=http://127.0.0.1:8000
+   ```
+3. **Run Dev server**:
+   ```bash
+   npm run dev
+   ```
+   * Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## Phase 4: Agent Reasoning Trace + Safe Action Planner
+## 8. API Endpoints
 
-Phase 4 implements an auditable triage agent (`triage-agent-v1`) that evaluates heuristic classifications and policy-grounded RAG context to formulate CRM action plans, reasoning logs, safety levels, and next steps.
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/health` | Core system status health check |
+| **POST** | `/api/ingest` | Normalizes and ingests email payloads |
+| **GET** | `/api/status/{message_id}` | Returns classification metrics for an email |
+| **GET** | `/api/actions/{message_id}` | Returns action plan, trace, and policy grounding details |
+| **GET** | `/dashboard/stats` | Aggregates operational KPIs for the stats cards |
+| **GET** | `/threads/{contact_email}` | Returns historical threads and contact profile metrics |
+| **GET** | `/rag/search?q=...` | Executes semantic search query against KB policies |
+| **POST** | `/rag/seed` | Seeds KB policies into ChromaDB database |
 
-### Safety Rules & Decision Logic
-1. **Spam & Internal**: Automatically blocked from auto-replies, marked as safe/blocked, and suppressed to save system resources.
-2. **Security & Ransomware Extortion**: Safety level: `blocked`. Suppresses all auto-replies and routes immediately to the **Security Incident Response Team** as dictated by the escalation matrix rules. Draft reply is `null`.
-3. **Legal Threats (Cease & Desist)**: Safety level: `blocked`. Suppresses auto-replies and routes directly to the **Legal Team**. Draft reply is `null`.
-4. **GDPR / Article 20 (Privacy)**: Safety level: `restricted`. Routes directly to the **Compliance and Legal Operations Team** tracking the statutory 30-day response window. Auto-replies are blocked (`null` draft).
-5. **SLA Outages & P0 Incidents**: Safety level: `restricted`. Escalates immediately to the **Support Lead and Engineering Manager** to trigger Root Cause Analysis (RCA) within 24 hours. Auto-reply is disallowed for billing/liability statements.
-6. **Public Review Threats / Churn Risk**: Safety level: `restricted`. Escalates to the **Customer Success Lead and Account Executive** to deploy the Customer Retention Playbook. Direct refund commitments are disallowed.
-7. **Billing & Customer Inquiries**: Safety level: `safe`. Automatically drafts a professional response grounded in the retrieved `pricing_policy.md` or `api_docs.md` context, allowing automated auto-replies.
+---
 
-### API Endpoints
-1. **GET Agent Action Plan (`GET /api/actions/{message_id}`)**:
-   Fetches the triage decision, recommended action, safety level, audit-friendly reasoning trace, policy sources used, and drafted reply (if applicable).
-   ```bash
-   GET /api/actions/msg_038
-   ```
-2. **GET Status (`GET /api/status/{message_id}`)**:
-   Includes compact agent fields: `agent_decision`, `auto_reply_allowed`, `requires_human_approval`, `escalation_team`, and `safety_level`.
+## 9. Demo walkthrough
 
+Follow this workflow to test the end-to-end functionality:
+1. **Start Backend Server**: Confirm uvicorn is running on port `8000`.
+2. **Seed KB**: Run `python scripts/seed_kb.py` to index markdown policies.
+3. **Stream Emails**: Execute `python scripts/stream_emails.py --speed 10`. This ingests over 60 simulated emails into the database.
+4. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
+5. **Evaluate Crucial Scenarios**:
+   * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
+   * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.
+   * Select **`msg_041`**: Standard billing question. Notice that auto-reply is **allowed** and the agent drafts a response containing pro-rata refund calculations using the RAG grounded refund policy.
+   * Select **`msg_031`**: Inheritance scam spam email. Categorized as spam, auto-reply blocked, and RAG grounding is skipped.
+6. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
 
+---
 
+## 10. Evaluation Highlights
+
+* **Resilience**: Gracefully handles malformed/duplicate payloads without interrupting streaming pipelines.
+* **Efficiency**: Triggers costly vector search RAG queries conditionally, avoiding execution overhead for low-risk/spam tickets.
+* **Explainability**: Persists comprehensive step-by-step agent reasoning logs and policy citation indices in database tables, keeping actions fully auditable.
+* **Safety first**: Prevents hallucinated or inappropriate replies to sensitive items (such as legal threats, compliance, or security extortion).
+* **Deep Context**: Merges individual emails into thread objects, mapping customer lifecycles and historical communications in real-time.
