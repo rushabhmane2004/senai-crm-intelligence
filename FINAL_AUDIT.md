@@ -177,3 +177,37 @@ The following items represent design limits established to comply with offline s
    python scripts/export_openapi.py
    ```
    *Confirms 14 paths exported for API title: Agentic CRM Intelligence Platform.*
+
+### Step 6: Final Demo Reset and Full Validation
+
+Run this before any screen recording, live demo, or submission to guarantee a clean 60-email database state:
+
+```bash
+python scripts/final_validation.py
+```
+
+This script:
+1. Resets all demo tables (`actions`, `audit_log`, `emails`, `threads`, `contacts`) while preserving `knowledge_chunks` and `web_intelligence_cache`.
+2. Auto-seeds the KB via `seed_kb.py` if `knowledge_chunks` is empty.
+3. Ingests exactly **60 emails** from `data/email-data-advanced.json`.
+4. Validates **10 critical scenarios** with PASS/FAIL output:
+
+| # | Scenario | Key Assertion |
+|---|---|---|
+| 1 | Dashboard stats | `total_emails == 60`, critical/escalated/spam > 0 |
+| 2 | msg_038 Ransomware | Security, Critical, priority 100, auto_reply=False |
+| 3 | msg_052 GDPR | Compliance, GDPR evidence in raw_entities |
+| 4 | msg_033 Karen WI | web_intelligence_used=True, summary present |
+| 5 | msg_041 Alice Billing | Billing, Processing, RAG context populated |
+| 6 | msg_060 Bob Dry-Run | dry_run=True, legal escalation, Enterprise, tool_calls<=6 |
+| 7 | msg_031 Spam | category=Spam, status=Spam, auto_reply blocked |
+| 8 | Karen Sentiment | deterioration_detected=True, >= 3 trend points |
+| 9 | Reputation Intel | offline_mock, robots_checked=True, g2_rating present |
+| 10 | RAG GDPR | compliance_faq.md or escalation_matrix.md in top docs |
+
+**Validated result**: `FINAL VALIDATION PASSED -- Clean 60-email demo ready!`
+
+To reset only (without re-ingesting):
+```bash
+python scripts/reset_demo_data.py
+```

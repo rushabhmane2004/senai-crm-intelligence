@@ -258,7 +258,45 @@ The following items represent design boundaries established to comply with offli
 
 ---
 
-## 12. Final Assessment Audit Report
+## 13. Final Demo Reset and Validation
+
+Before a screen recording, live demo, or submission, run the full demo reset and validation workflow to ensure a clean 60-email database state:
+
+```bash
+# Step 1 only: wipe runtime demo tables (preserves KB and intelligence cache)
+python scripts/reset_demo_data.py
+
+# Full workflow: reset + seed KB check + ingest 60 emails + validate all 10 critical scenarios
+python scripts/final_validation.py
+```
+
+**What `reset_demo_data.py` does:**
+- Deletes all rows from `actions`, `audit_log`, `emails`, `threads`, `contacts` in FK-safe order.
+- Does NOT touch `knowledge_chunks`, `web_intelligence_cache`, ChromaDB, or KB markdown files.
+- Prints row counts deleted per table and exits with code 0 on success.
+
+**What `final_validation.py` does:**
+1. Runs `reset_demo_data.py` to clear demo tables.
+2. Checks `knowledge_chunks` — runs `seed_kb.py` automatically if empty.
+3. Ingests all 60 emails from `data/email-data-advanced.json` via `/api/ingest`.
+4. Validates 10 critical scenarios:
+   - Dashboard stats: exactly 60 emails, critical/escalated/spam counts > 0
+   - msg_038: Security, Critical, priority 100, auto_reply blocked
+   - msg_052: Compliance, GDPR evidence in raw entities
+   - msg_033: Complaint, `web_intelligence_used=True`
+   - msg_041: Billing, safe path (Processing), RAG context populated
+   - msg_060: Agent dry-run, legal escalation, Enterprise account, tool_call_count <= 6
+   - msg_031: Spam category and status, auto_reply blocked
+   - Karen sentiment trend: deterioration detected, >= 3 points
+   - Reputation intelligence: offline_mock mode, robots_checked, g2_rating present
+   - RAG GDPR retrieval: compliance_faq.md or escalation_matrix.md in top docs
+5. Prints `FINAL VALIDATION PASSED` or `FINAL VALIDATION FAILED` and exits with code 0/1.
+
+> This is the **recommended command before any screen recording or evaluator demo**.
+
+---
+
+## 14. Final Assessment Audit Report
 
 For a complete checklist of requirement coverage, scenario validations, and automatic disqualifier checks, refer to the [FINAL_AUDIT.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/FINAL_AUDIT.md) document in the workspace.
 
