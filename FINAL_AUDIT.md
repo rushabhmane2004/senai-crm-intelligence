@@ -11,7 +11,7 @@ This document presents a comprehensive audit of the requirements, scenario valid
 | **Ingestion Pipeline** | **Yes** | [ingest.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/ingest.py) | Full schema validation via Pydantic payload, character limit truncation (10,000 chars), and audit logger. Hardening verified by [test_edge_cases.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_edge_cases.py). |
 | **Deduplication** | **Yes** | [ingest.py:L269-282](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/ingest.py#L269-L282) | Checks unique `message_id` constraint via SQLite nested transactions, returning `duplicate_ignored`. |
 | **Thread Linking** | **Yes** | [ingest.py:L120-147](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/ingest.py#L120-L147) | Looks up threads by `thread_id`. Reuses thread instance and updates `last_updated_at` parameter. |
-| **Heuristic Pre-Filter** | **Yes** | [ingest.py:L180](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/ingest.py#L180) | Categorizes and assigns priority values (0-3 or 100) immediately using keyword heuristics. |
+| **Heuristic Pre-Filter** | **Yes** | [heuristic_classifier.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/heuristic_classifier.py) | Categorizes and assigns priority immediately. Scenarios and speed benchmark (avg < 0.1ms) verified by [test_classifier_cases.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_classifier_cases.py). |
 | **RAG Policy Pipeline** | **Yes** | [rag_service.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/rag_service.py) | Indexes 6 markdown files using sentence-transformers `all-MiniLM-L6-v2` inside ChromaDB. |
 | **Triage Agent** | **Yes** | [triage_agent.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/triage_agent.py) | Produces decisions, draft replies, safety levels (`blocked`, `restricted`, `safe`), and reasoning traces. |
 | **Normalized DB Design** | **Yes** | [database_schema.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/docs/database_schema.md) | Relational SQL schema with indexes on keys (`contacts`, `threads`, `emails`, `actions`, etc.). |
@@ -93,7 +93,12 @@ The following items represent design limits established to comply with offline s
    python scripts/test_edge_cases.py
    ```
    *Confirm all 12 edge cases pass successfully.*
-3. Attempt duplicate stream ingestion:
+3. Validate heuristic classifier benchmarks:
+   ```bash
+   python scripts/test_classifier_cases.py
+   ```
+   *Confirm all 8 scenario expectations pass and average runtime is under 10ms.*
+4. Attempt duplicate stream ingestion:
    ```bash
    curl.exe -X POST http://127.0.0.1:8000/api/ingest -H "Content-Type: application/json" -d "{\"message_id\": \"msg_038\", \"sender\": \"hacker@anon-collective.net\", \"subject\": \"We have your data - Pay Now\", \"body\": \"Ransomware extortion\", \"timestamp\": \"2023-10-11T17:30:00Z\", \"thread_id\": \"thread_security_002\"}"
    ```
