@@ -1,0 +1,257 @@
+# Agentic CRM Intelligence Platform
+
+A production-grade Agentic CRM Intelligence Platform and Real-Time Email Operations System designed for automated lead qualification, support routing, security alerts ingestion, and customer analytics.
+
+---
+
+## Phase 1 Overview: Backend Foundation & Ingestion
+
+Phase 1 establishes the core backend architectures, database models, request validations, data normalization pipeline, contact thread linking, and automated priority heuristics. It includes a multi-threaded streaming simulation script mimicking real-time customer and client interactions.
+
+### Completed Features
+
+1. **FastAPI Web Framework**:
+   * Clean, modular routes registration for ingestion, dashboards, statuses, and contact history.
+   * CORS middleware initialized for cross-origin frontend requests.
+   * Global exception interceptors mapping standard Pydantic validation errors and HTTP exceptions into a consistent error response envelope.
+   * Root `/health` status endpoint.
+
+2. **Database Schema & Models**:
+   * **`contacts`**: Stores profiles, lifecycle status (`VIP`, `Blocked`, `Active`, `Churned`), account valuation, and metadata.
+   * **`threads`**: Groups communications. Connects incoming messages logically.
+   * **`emails`**: Real-time email ingestion rows. Connects to `threads.id`. Includes priority scores and sentiment parameters.
+   * **`actions`**: Captures proposed AI replies, reasons, and approvals.
+   * **`audit_log`**: Records audit tracks of internal processing, changes, and database modifications.
+
+3. **Email Ingestion Engine (`POST /api/ingest`)**:
+   * Normalizes incoming subject and body whitespace.
+   * Gracefully falls back to defaults for empty subjects and bodies.
+   * Automates message deduplication using `message_id` hashes to prevent message double-processing (`duplicate_ignored`).
+   * Truncates message body payloads to `10,000` characters if they exceed limits, flagging the audit logs.
+   * Assigns initial priority scores (`0` to `3`) using keyword heuristics:
+     * **Critical (3)**: `ransomware`, `legal`, `cease and desist`, `p0`, `production down`, `breach`, `gdpr`.
+     * **High (2)**: `urgent`, `refund`, `outage`, `escalation`, `public review`, `trustpilot`, `g2`.
+     * **Medium (1)**: `bug`, `issue`, `deadline`, `failed`, `compliance`, `rfp`.
+     * **Low (0)**: Default priority level.
+   * Updates contact profiles (`last_contact_at`).
+
+4. **Real-time Streaming Simulator (`scripts/stream_emails.py`)**:
+   * Reads high-fidelity JSON files.
+   * Submits payloads to the ingestion pipeline.
+   * Supports speed configurations via command-line arguments.
+   * Gracefully catches and formats operational API errors.
+
+---
+
+## Technical Stack
+* **Backend**: Python 3.10+ (FastAPI)
+* **Web Server**: Uvicorn
+* **Database**: PostgreSQL 15
+* **ORM**: SQLAlchemy
+* **Validation**: Pydantic v2
+* **Containerization**: Docker & Docker Compose
+
+---
+
+## Setup & Running Guide
+
+### 1. Locally (with SQLite fallback)
+
+For quick development iteration, the backend automatically falls back to a SQLite database when no external Postgres connection is provided.
+
+1. **Create Virtual Environment**:
+   ```bash
+   python -m venv .venv
+   .venv\Scripts\activate      # Windows
+   source .venv/bin/activate    # macOS/Linux
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+
+3. **Configure Settings**:
+   Create a local `.env` in the root workspace folder:
+   ```env
+   DATABASE_URL=sqlite:///./senai_crm.db
+   BACKEND_PORT=8000
+   ```
+
+4. **Start the FastAPI Backend**:
+   ```bash
+   python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+   * Swagger documentation is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+   * Health endpoint is available at [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health).
+
+5. **Run the Streaming Simulator**:
+   ```bash
+   # Stream at speed multiplier 1 (1 email per second)
+   python scripts/stream_emails.py --speed 1
+   ```
+
+---
+
+### 2. Using Docker Compose (with PostgreSQL)
+
+To test a production-like environment with persistent PostgreSQL storage:
+
+1. **Configure Environment Variables**:
+   Copy `.env.example` to `.env`:
+   ```bash
+   copy .env.example .env
+   ```
+
+2. **Build and Launch Container Stack**:
+   ```bash
+   docker-compose up --build -d
+   ```
+   This spins up:
+   * **`crm_postgres`**: Local PostgreSQL database mapped to port `5432` with a persistent volume named `pgdata`.
+   * **`crm_backend`**: FastAPI backend mapped to port `8000`. It waits until PostgreSQL is fully healthy.
+
+3. **Stream Emails into the Container Backend**:
+   ```bash
+   python scripts/stream_emails.py --speed 2
+   ```
+
+4. **Stop Container Stack**:
+   ```bash
+   docker-compose down -v
+   ```
+
+---
+
+## API Documentation
+
+### 1. Ingest Email (`POST /api/ingest`)
+
+**Request Payload**:
+```json
+{
+  "message_id": "msg_002",
+  "sender": "bob.jones@enterprise.net",
+  "subject": "URGENT: Production System Down",
+  "body": "Our production server is not responding since 08:50 UTC. We need support immediately. This is a P0 incident.",
+  "timestamp": "2023-10-01T09:15:00Z",
+  "thread_id": "thread_bob_outage"
+}
+```
+
+**Response (New Ingest)**:
+```json
+{
+  "email_id": 2,
+  "message_id": "msg_002",
+  "thread_id": "thread_bob_outage",
+  "status": "Received",
+  "priority_score": 3
+}
+```
+
+**Response (Duplicate Ignored)**:
+```json
+{
+  "email_id": 2,
+  "message_id": "msg_002",
+  "thread_id": "thread_bob_outage",
+  "status": "duplicate_ignored",
+  "priority_score": 3
+}
+```
+
+### 2. Contact Threads History (`GET /threads/{contact_email}`)
+
+Returns the user profile, all group communication threads, chronological list of emails, and details of actions proposed or performed on their behalf.
+
+**Response**:
+```json
+{
+  "contact": {
+    "id": 1,
+    "email": "alice.smith@greenlight-npo.org",
+    "name": null,
+    "company": null,
+    "status": "Active",
+    "account_value": 0.0,
+    "churn_risk_score": 0.0,
+    "created_at": "2026-06-09T14:25:09",
+    "last_contact_at": "2026-06-09T14:26:35.628932"
+  },
+  "threads": [
+    {
+      "id": 1,
+      "thread_id": "thread_alice_pricing",
+      "subject": "Question about pricing",
+      "sender_email": "alice.smith@greenlight-npo.org",
+      "first_seen_at": "2023-10-01T09:00:00",
+      "last_updated_at": "2026-06-09T14:26:35.626932",
+      "status": "Open",
+      "assigned_to": null,
+      "emails": [
+        {
+          "id": 1,
+          "thread_id": 1,
+          "message_id": "msg_001",
+          "sender": "alice.smith@greenlight-npo.org",
+          "subject": "Question about pricing",
+          "body": "Hi, I was looking at your enterprise plan. Do you offer discounts for non-profits? We are a registered 501(c)(3) and work with underserved communities.",
+          "timestamp": "2023-10-01T09:00:00",
+          "priority_score": 0,
+          "sentiment_score": null,
+          "category": null,
+          "urgency": null,
+          "requires_human": null,
+          "confidence": null,
+          "raw_entities": null,
+          "status": "Received",
+          "created_at": "2026-06-09T14:25:09",
+          "actions": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 3. Dashboard Stats (`GET /dashboard/stats`)
+
+Returns counts of total emails, pending tasks (Received or Processing status), spam items, escalated threads, critical queries, contacts, and active conversations.
+
+**Response**:
+```json
+{
+  "total_emails": 60,
+  "pending_emails": 60,
+  "spam_emails": 0,
+  "escalated_emails": 0,
+  "critical_emails": 4,
+  "total_contacts": 48,
+  "total_threads": 47
+}
+```
+
+### 4. Consistent Error Envelope
+
+All API errors return a standard envelope schema:
+
+**Example validation error (HTTP 422)**:
+```json
+{
+  "error_code": "VALIDATION_ERROR",
+  "message": "Invalid email payload",
+  "details": {
+    "body.sender": "value is not a valid email address: An email address must have an @-sign."
+  }
+}
+```
+
+**Example not found error (HTTP 404)**:
+```json
+{
+  "error_code": "NOT_FOUND",
+  "message": "Email with message_id 'msg_nonexistent' not found",
+  "details": {}
+}
+```
