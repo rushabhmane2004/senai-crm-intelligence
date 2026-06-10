@@ -375,4 +375,29 @@ Expected search results:
 6. **Query**: `ransomware never auto-reply escalation`
    * Returns: `escalation_matrix.md`
 
+---
+
+## Phase 4: Agent Reasoning Trace + Safe Action Planner
+
+Phase 4 implements an auditable triage agent (`triage-agent-v1`) that evaluates heuristic classifications and policy-grounded RAG context to formulate CRM action plans, reasoning logs, safety levels, and next steps.
+
+### Safety Rules & Decision Logic
+1. **Spam & Internal**: Automatically blocked from auto-replies, marked as safe/blocked, and suppressed to save system resources.
+2. **Security & Ransomware Extortion**: Safety level: `blocked`. Suppresses all auto-replies and routes immediately to the **Security Incident Response Team** as dictated by the escalation matrix rules. Draft reply is `null`.
+3. **Legal Threats (Cease & Desist)**: Safety level: `blocked`. Suppresses auto-replies and routes directly to the **Legal Team**. Draft reply is `null`.
+4. **GDPR / Article 20 (Privacy)**: Safety level: `restricted`. Routes directly to the **Compliance and Legal Operations Team** tracking the statutory 30-day response window. Auto-replies are blocked (`null` draft).
+5. **SLA Outages & P0 Incidents**: Safety level: `restricted`. Escalates immediately to the **Support Lead and Engineering Manager** to trigger Root Cause Analysis (RCA) within 24 hours. Auto-reply is disallowed for billing/liability statements.
+6. **Public Review Threats / Churn Risk**: Safety level: `restricted`. Escalates to the **Customer Success Lead and Account Executive** to deploy the Customer Retention Playbook. Direct refund commitments are disallowed.
+7. **Billing & Customer Inquiries**: Safety level: `safe`. Automatically drafts a professional response grounded in the retrieved `pricing_policy.md` or `api_docs.md` context, allowing automated auto-replies.
+
+### API Endpoints
+1. **GET Agent Action Plan (`GET /api/actions/{message_id}`)**:
+   Fetches the triage decision, recommended action, safety level, audit-friendly reasoning trace, policy sources used, and drafted reply (if applicable).
+   ```bash
+   GET /api/actions/msg_038
+   ```
+2. **GET Status (`GET /api/status/{message_id}`)**:
+   Includes compact agent fields: `agent_decision`, `auto_reply_allowed`, `requires_human_approval`, `escalation_team`, and `safety_level`.
+
+
 

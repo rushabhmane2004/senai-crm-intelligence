@@ -27,6 +27,14 @@ class EmailStatusResponse(BaseModel):
     confidence: Optional[float] = None
     raw_entities: Optional[Dict[str, Any]] = None
 
+    # Compact agent fields
+    agent_decision: Optional[str] = None
+    auto_reply_allowed: Optional[bool] = None
+    requires_human_approval: Optional[bool] = None
+    escalation_team: Optional[str] = None
+    safety_level: Optional[str] = None
+
+
 # Schema definitions for GET /threads/{contact_email}
 class ActionSchema(BaseModel):
     id: int

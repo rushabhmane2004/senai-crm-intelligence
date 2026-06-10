@@ -3,3 +3,5 @@ from . import threads
 from . import dashboard
 from . import status
 from . import rag
+from . import actions
+

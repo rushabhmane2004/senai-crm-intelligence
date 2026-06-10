@@ -20,6 +20,8 @@ def get_email_status(message_id: str, db: Session = Depends(get_db)):
             }
         )
 
+    # Extract compact agent fields from raw_entities if present
+    raw = email.raw_entities or {}
     return EmailStatusResponse(
         message_id=email.message_id,
         status=email.status,
@@ -28,5 +30,11 @@ def get_email_status(message_id: str, db: Session = Depends(get_db)):
         priority_score=email.priority_score,
         requires_human=email.requires_human,
         confidence=email.confidence,
-        raw_entities=email.raw_entities
+        raw_entities=email.raw_entities,
+        agent_decision=raw.get("agent_decision"),
+        auto_reply_allowed=raw.get("auto_reply_allowed"),
+        requires_human_approval=raw.get("requires_human_approval"),
+        escalation_team=raw.get("escalation_team"),
+        safety_level=raw.get("safety_level")
     )
+

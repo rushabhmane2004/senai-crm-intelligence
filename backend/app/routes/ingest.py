@@ -238,7 +238,14 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         raw_entities["rag_used"] = False
         raw_entities["rag_error"] = rag_error_msg
 
-    # 7.5. Store email with status, priority, and raw_entities
+    # 7.5. Run Triage Agent and build safe CRM action plan
+    from app.services.triage_agent import run_triage_agent
+    from app.models.action import Action
+    
+    rag_context_list = raw_entities.get("rag_context", None)
+    agent_plan = run_triage_agent(dummy_email, heuristic_res, rag_context=rag_context_list)
+    
+    # 7.6. Store email with status, priority, and raw_entities
     email = Email(
         thread_id=thread.id,
         message_id=payload.message_id,
@@ -275,6 +282,44 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
             )
         else:
             raise
+
+    # 7.7. Create and persist Action plan record in DB
+    db_action = Action(
+        email_id=email.id,
+        agent_reasoning_log=agent_plan["reasoning_trace"],
+        action_type=agent_plan["decision"],
+        proposed_content=agent_plan["draft_reply"],
+        recommended_action=agent_plan["recommended_action"],
+        auto_reply_allowed=agent_plan["auto_reply_allowed"],
+        requires_human_approval=agent_plan["requires_human_approval"],
+        escalation_team=agent_plan["escalation_team"],
+        safety_level=agent_plan["safety_level"],
+        policy_sources=agent_plan["policy_sources_used"],
+        status="pending"
+    )
+    
+    try:
+        savepoint = db.begin_nested()
+        db.add(db_action)
+        db.flush()
+        savepoint.commit()
+    except Exception:
+        savepoint.rollback()
+        db_action = None
+
+    # Inject triage parameters back into email.raw_entities
+    raw_entities_copy = dict(raw_entities)
+    raw_entities_copy["agent_decision"] = agent_plan["decision"]
+    raw_entities_copy["auto_reply_allowed"] = agent_plan["auto_reply_allowed"]
+    raw_entities_copy["requires_human_approval"] = agent_plan["requires_human_approval"]
+    raw_entities_copy["escalation_team"] = agent_plan["escalation_team"]
+    raw_entities_copy["safety_level"] = agent_plan["safety_level"]
+    if db_action:
+        raw_entities_copy["agent_action_id"] = db_action.id
+    email.raw_entities = raw_entities_copy
+    db.add(email)
+
+
 
     # 8. Create audit log entry for email ingestion
     audit_diff = {
