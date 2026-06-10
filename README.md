@@ -189,6 +189,9 @@ python scripts/stream_emails.py --speed 10
 | **GET** | `/threads/{contact_email}` | Returns historical threads and contact profile metrics |
 | **GET** | `/rag/search?q=...` | Executes semantic search query against KB policies |
 | **POST** | `/rag/seed` | Seeds KB policies into ChromaDB database |
+| **GET** | `/analytics/sentiment-trend` | Returns chronological sentiment trend, moving average, and deterioration flags |
+| **GET** | `/analytics/category-breakdown` | Returns total email count and category breakdown statistics |
+| **GET** | `/analytics/risk-summary` | Returns critical/escalated/spam counts and top at-risk customer senders |
 
 ---
 
@@ -199,13 +202,14 @@ Follow this workflow to test the end-to-end functionality:
 2. **Seed KB**: Run `python scripts/seed_kb.py` to index markdown policies.
 3. **Stream Emails**: Execute `python scripts/stream_emails.py --speed 10`. This ingests over 60 simulated emails into the database.
 4. **Validate LLM Classification**: Execute `python scripts/test_llm_classification.py` to verify structured outputs, entity extraction, and safety overrides.
-5. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
-5. **Evaluate Crucial Scenarios**:
+5. **Validate Sentiment Trend & Analytics**: Run `python scripts/test_analytics.py` to verify categories, trends, risk, and regression safety.
+6. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
+7. **Evaluate Crucial Scenarios**:
    * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
    * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.
    * Select **`msg_041`**: Standard billing question. Notice that auto-reply is **allowed** and the agent drafts a response containing pro-rata refund calculations using the RAG grounded refund policy.
    * Select **`msg_031`**: Inheritance scam spam email. Categorized as spam, auto-reply blocked, and RAG grounding is skipped.
-6. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
+8. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
 
 ---
 
