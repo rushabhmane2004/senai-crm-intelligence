@@ -26,3 +26,5 @@ build/
 # Databases
 *.db
 *.sqlite3
+
+backend/chroma_store/
