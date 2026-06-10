@@ -17,7 +17,7 @@ This document presents a comprehensive audit of the requirements, scenario valid
 | **Normalized DB Design** | **Yes** | [database_schema.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/docs/database_schema.md) | Relational SQL schema with indexes on keys (`contacts`, `threads`, `emails`, `actions`, etc.). |
 | **Backend API** | **Yes** | [main.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/main.py) | FastAPI routes serving status, actions, dashboard stats, threads timeline, and analytics parameters. |
 | **Frontend Dashboard** | **Yes** | [App.jsx](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/frontend/src/App.jsx) | Dark interactive React dashboard displaying operations KPIs, critical sidebar, and trace logs. |
-| **Web Intelligence** | **Yes** | [intelligence.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/intelligence.py) | Lightweight offline web reputation API returning cached risk reports for Karen/Retail-Co. |
+| **Web Intelligence** | **Yes** | [intelligence.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/intelligence.py) · [web_intelligence.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/web_intelligence.py) | Safe offline mock reputation intelligence with 6-hour DB cache, `robots_checked=true`, and graceful fallback. Trigger logic fires on G2/Trustpilot/review keywords or Complaint+High/Critical urgency. Verified by [test_web_intelligence.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_web_intelligence.py). No live scraping by default — offline cached mode avoids rate limits and robots.txt issues. |
 | **LLM Classification** | **Yes** | [llm_classifier.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/services/llm_classifier.py) | Structured JSON output classification with entity extraction and deterministic safety overrides fallback. Verified by [test_llm_classification.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_llm_classification.py). |
 | **Sentiment Trend & Analytics** | **Yes** | [analytics.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/analytics.py) | Exposes chronological sentiment trends, moving averages, consecutive negative email alert, category breakdowns, and risk statistics. Verified by [test_analytics.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_analytics.py). |
 | **Autonomous Agent Dry-Run** | **Yes** | [agent.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/backend/app/routes/agent.py) | Planning-only dry-run endpoint with audit-friendly ReAct trace output. Verified by [test_agent_dry_run.py](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/scripts/test_agent_dry_run.py). |
@@ -111,7 +111,12 @@ The following items represent design limits established to comply with offline s
    python scripts/test_analytics.py
    ```
    *Confirm all category breakdowns, sentiment trends, risk summaries, and regression checks pass.*
-6. Validate RAG quality benchmarks:
+6. Validate offline web intelligence module:
+   ```bash
+   python scripts/test_web_intelligence.py
+   ```
+   *Confirm reputation endpoint returns offline mock data with cache semantics, and msg_033 has `web_intelligence_used=true` in raw_entities.*
+7. Validate RAG quality benchmarks:
    ```bash
    python scripts/test_rag_quality.py
    ```

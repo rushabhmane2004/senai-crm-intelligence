@@ -5,5 +5,6 @@ from app.models.email import Email
 from app.models.action import Action
 from app.models.audit_log import AuditLog
 from app.models.knowledge_chunk import KnowledgeChunk
+from app.models.web_intelligence_cache import WebIntelligenceCache
 
-__all__ = ["Base", "Contact", "Thread", "Email", "Action", "AuditLog", "KnowledgeChunk"]
+__all__ = ["Base", "Contact", "Thread", "Email", "Action", "AuditLog", "KnowledgeChunk", "WebIntelligenceCache"]

@@ -277,7 +277,42 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         heuristic_res["low_confidence_review"] = True
         raw_entities["low_confidence_review"] = True
 
-    # 7.6. Run Triage Agent and build safe CRM action plan
+    # 7.6. Web Intelligence (Safe Offline Mode)
+    try:
+        from app.services.web_intelligence import (
+            should_trigger_web_intelligence,
+            get_reputation_intelligence,
+        )
+
+        # Infer the sender domain as the company/entity for intelligence lookup
+        sender_domain = payload.sender.split("@")[-1].strip().lower() if "@" in payload.sender else payload.sender.lower().strip()
+
+        # Retrieve sentiment score from LLM output if available
+        wi_sentiment = llm_classification.get("sentiment_score", None)
+
+        wi_trigger = should_trigger_web_intelligence(
+            email_subject=clean_subject,
+            email_body=ai_body,
+            category=heuristic_res["category"],
+            urgency=heuristic_res["urgency"],
+            sentiment_score=wi_sentiment,
+        )
+
+        if wi_trigger:
+            wi_result = get_reputation_intelligence(sender_domain, db)
+            raw_entities["web_intelligence_used"] = True
+            raw_entities["web_intelligence"] = wi_result
+            raw_entities["market_intelligence_block"] = wi_result.get(
+                "public_sentiment_summary", {}
+            ).get("summary", "")
+        else:
+            raw_entities["web_intelligence_used"] = False
+
+    except Exception as wi_exc:
+        raw_entities["web_intelligence_used"] = False
+        raw_entities["web_intelligence_error"] = str(wi_exc)[:200]
+
+    # 7.7. Run Triage Agent and build safe CRM action plan
     from app.services.triage_agent import run_triage_agent
     from app.models.action import Action
     

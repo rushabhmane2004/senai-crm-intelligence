@@ -193,6 +193,7 @@ python scripts/stream_emails.py --speed 10
 | **GET** | `/analytics/sentiment-trend` | Returns chronological sentiment trend, moving average, and deterioration flags |
 | **GET** | `/analytics/category-breakdown` | Returns total email count and category breakdown statistics |
 | **GET** | `/analytics/risk-summary` | Returns critical/escalated/spam counts and top at-risk customer senders |
+| **GET** | `/intelligence/reputation?company=...` | Returns offline mock public reputation intelligence (G2, Trustpilot, Capterra) with 6-hour DB cache semantics |
 | **POST** | `/agent/dry-run/{message_id}` | Runs a planning-only dry-run simulation of the triage agent without side effects, returning a ReAct tool trace |
 
 ---
@@ -206,9 +207,10 @@ Follow this workflow to test the end-to-end functionality:
 4. **Validate LLM Classification**: Execute `python scripts/test_llm_classification.py` to verify structured outputs, entity extraction, and safety overrides.
 5. **Validate Sentiment Trend & Analytics**: Run `python scripts/test_analytics.py` to verify categories, trends, risk, and regression safety.
 6. **Validate RAG Quality**: Run `python scripts/test_rag_quality.py` to verify RAG semantic retrieval accuracy on all 6 evaluation scenarios.
-7. **Validate Autonomous Agent Dry-Run**: Run `python scripts/test_agent_dry_run.py` to verify the planning-only endpoint runs without side effects and produces ReAct-style traces.
-8. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
-9. **Evaluate Crucial Scenarios**:
+7. **Validate Web Intelligence**: Run `python scripts/test_web_intelligence.py` to verify offline reputation intelligence, cache hit semantics, and msg_033 raw_entities enrichment.
+8. **Validate Autonomous Agent Dry-Run**: Run `python scripts/test_agent_dry_run.py` to verify the planning-only endpoint runs without side effects and produces ReAct-style traces.
+9. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
+10. **Evaluate Crucial Scenarios**:
    * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
    * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.
    * Select **`msg_041`**: Standard billing question. Notice that auto-reply is **allowed** and the agent drafts a response containing pro-rata refund calculations using the RAG grounded refund policy.
@@ -232,8 +234,9 @@ Follow this workflow to test the end-to-end functionality:
 The following items represent design boundaries established to comply with offline sandbox constraints and API key restrictions:
 1. **Rule-Based Triage Planner**: The triage engine uses a deterministic regex parser and policy lookup rather than an external LLM API (such as OpenAI/Anthropic). This eliminates token cost overhead, connectivity errors, and API credential issues.
 2. **Heuristic Sentiment Trend**: The `/analytics/sentiment-trend` endpoint evaluates email customer sentiment timelines using category/urgency mappings rather than a live machine learning model.
-3. **Mock Reputation Intelligence**: The `/intelligence/reputation` endpoint provides cached review ratings and threat reports for G2 and Trustpilot queries. It does not perform active scraping on real websites to bypass sandboxed firewall blocks.
-4. **Scope Exclusions**: SMTP mail triggers and database level event triggers are not implemented. Action executions are stored as status logs.
+3. **Web Intelligence Offline Mode**: Web intelligence runs in offline mock mode by default for safe reproducible evaluation. The architecture includes full cache semantics (`web_intelligence_cache` DB table, 6-hour TTL, `robots_checked=true`) and trigger logic. Live scraping can be enabled later behind the same service interface without changing the API contract.
+4. **Mock Reputation Intelligence**: The `/intelligence/reputation` endpoint provides realistic mock ratings and threat reports. It does not perform active scraping on real websites to bypass sandboxed firewall blocks.
+5. **Scope Exclusions**: SMTP mail triggers and database level event triggers are not implemented. Action executions are stored as status logs.
 
 ---
 

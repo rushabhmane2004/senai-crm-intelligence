@@ -1,32 +1,26 @@
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.web_intelligence import get_reputation_intelligence
 
 router = APIRouter(prefix="/intelligence", tags=["intelligence"])
 
+
 @router.get("/reputation", status_code=status.HTTP_200_OK)
-def get_company_reputation(company: str = Query(..., min_length=1)):
-    company_lower = company.lower().strip()
-    
-    # Check if company matches Karen scenario / Retail-Co profiles
-    if "retail-co" in company_lower or "retail_co" in company_lower or "karen" in company_lower:
-        return {
-            "company": company,
-            "reputation_source": "Trustpilot / G2 Meta-Scraping Engine (Cached)",
-            "average_rating": 1.8,
-            "review_count": 42,
-            "verdict": "high-risk-public-churn-threat",
-            "details": "Customer Karen escalation detected. Highly critical negative ratings registered regarding pro-rata billing disputes and refund eligibility rules. High risk of immediate churn and public forum brand damage.",
-            "is_mock": True,
-            "is_live": False
-        }
-        
-    # Standard graceful fallback
-    return {
-        "company": company,
-        "reputation_source": "System Offline Database Cache",
-        "average_rating": 4.2,
-        "review_count": 115,
-        "verdict": "standard-satisfactory-profile",
-        "details": "Standard satisfactory customer reputation rating. No public escalations or churn indicators found in offline cache.",
-        "is_mock": True,
-        "is_live": False
-    }
+def get_company_reputation(
+    company: str = Query(..., min_length=1, description="Company name or domain, e.g. retail-co.com"),
+    db: Session = Depends(get_db),
+):
+    """
+    Return cached offline public reputation intelligence for a company/domain.
+
+    - **scraping_mode**: always "offline_mock" in this safe evaluation build.
+    - **robots_checked**: always True — robots.txt compliance intent is preserved.
+    - **cache_status**: "hit" if served from DB cache, "miss" on first fetch, "fallback" on error.
+    - **expires_at**: cache record expires 6 hours after creation.
+
+    Live scraping can be enabled later by swapping `get_reputation_intelligence` for
+    a live implementation while keeping the same response schema.
+    """
+    result = get_reputation_intelligence(company.strip(), db)
+    return result

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.database import engine, Base
 # Import models to ensure they are registered on metadata before create_all
-from app.models import contact, thread, email, action, audit_log, knowledge_chunk
+from app.models import contact, thread, email, action, audit_log, knowledge_chunk, web_intelligence_cache
 from app.routes import ingest, threads, dashboard, status as status_route, rag, actions, agent, analytics, intelligence, classification
 from app.config import settings
 
