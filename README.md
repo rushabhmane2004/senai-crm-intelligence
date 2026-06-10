@@ -123,6 +123,29 @@ To test a production-like environment with persistent PostgreSQL storage:
 
 ---
 
+### 3. Running the Frontend Dashboard
+
+A professional, high-end dark React/Vite dashboard is available inside the `frontend/` directory to visualize stats, queues, agent reasoning traces, policy grounding, and auto-reply safeties in real-time.
+
+1. **Navigate to Frontend Directory**:
+   ```bash
+   cd frontend
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+3. **Start the Frontend Development Server**:
+   ```bash
+   npm run dev
+   ```
+   * The application will run locally (typically at [http://localhost:5173](http://localhost:5173)).
+   * The backend endpoint URL can be customized in `frontend/.env` via the `VITE_API_BASE_URL` setting.
+
+---
+
 ## API Documentation
 
 ### 1. Ingest Email (`POST /api/ingest`)

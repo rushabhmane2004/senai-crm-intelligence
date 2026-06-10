@@ -26,6 +26,9 @@ class EmailStatusResponse(BaseModel):
     requires_human: Optional[bool] = None
     confidence: Optional[float] = None
     raw_entities: Optional[Dict[str, Any]] = None
+    sender: Optional[str] = None
+    body: Optional[str] = None
+    subject: Optional[str] = None
 
     # Compact agent fields
     agent_decision: Optional[str] = None
@@ -33,6 +36,8 @@ class EmailStatusResponse(BaseModel):
     requires_human_approval: Optional[bool] = None
     escalation_team: Optional[str] = None
     safety_level: Optional[str] = None
+
+
 
 
 # Schema definitions for GET /threads/{contact_email}
