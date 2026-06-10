@@ -9,32 +9,14 @@ from app.models.email import Email
 from app.models.audit_log import AuditLog
 from app.schemas.email import EmailIngestPayload, EmailIngestResponse
 
+from app.services.heuristic_classifier import classify_email_heuristically
+
 router = APIRouter(prefix="/api", tags=["ingestion"])
 
 def normalize_whitespace(text: str) -> str:
     if not text:
         return ""
     return re.sub(r'\s+', ' ', text).strip()
-
-def calculate_priority(subject: str, body: str) -> int:
-    text = f"{subject} {body}".lower()
-    
-    # Critical keywords: ransomware, legal, cease and desist, p0, production down, breach, gdpr
-    critical_kws = ["ransomware", "legal", "cease and desist", "p0", "production down", "breach", "gdpr"]
-    if any(kw in text for kw in critical_kws):
-        return 3
-        
-    # High keywords: urgent, refund, outage, escalation, public review, trustpilot, g2
-    high_kws = ["urgent", "refund", "outage", "escalation", "public review", "trustpilot", "g2"]
-    if any(kw in text for kw in high_kws):
-        return 2
-        
-    # Medium keywords: bug, issue, deadline, failed, compliance, rfp
-    medium_kws = ["bug", "issue", "deadline", "failed", "compliance", "rfp"]
-    if any(kw in text for kw in medium_kws):
-        return 1
-        
-    return 0
 
 @router.post("/ingest", response_model=EmailIngestResponse, status_code=status.HTTP_200_OK)
 def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
@@ -101,10 +83,10 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         contact.last_contact_at = datetime.utcnow()
         db.add(contact)
 
-    # 6. Assign initial priority score using simple keyword heuristics
-    priority_score = calculate_priority(clean_subject, clean_body)
+    # 6. Classify email using the rule-based heuristic classifier
+    heuristic_res = classify_email_heuristically(payload.sender, clean_subject, clean_body)
 
-    # 7. Store email with status "Received"
+    # 7. Store email with status and priority from the classifier
     email = Email(
         thread_id=thread.id,
         message_id=payload.message_id,
@@ -112,8 +94,20 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         subject=clean_subject,
         body=clean_body,
         timestamp=payload.timestamp,
-        priority_score=priority_score,
-        status="Received"
+        priority_score=heuristic_res["priority_score"],
+        category=heuristic_res["category"],
+        urgency=heuristic_res["urgency"],
+        requires_human=heuristic_res["requires_human"],
+        status=heuristic_res["status"],
+        raw_entities={
+            "routing_queue": heuristic_res["routing_queue"],
+            "security_flag": heuristic_res["security_flag"],
+            "legal_flag": heuristic_res["legal_flag"],
+            "is_spam": heuristic_res["is_spam"],
+            "is_internal": heuristic_res["is_internal"],
+            "escalation_reason": heuristic_res["escalation_reason"],
+            "heuristic_result": heuristic_res
+        }
     )
     db.add(email)
     db.flush()  # Obtain email.id
@@ -122,7 +116,11 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
     audit_diff = {
         "is_truncated": is_truncated,
         "original_body_length": original_length,
-        "priority_score": priority_score,
+        "priority_score": email.priority_score,
+        "category": email.category,
+        "urgency": email.urgency,
+        "requires_human": email.requires_human,
+        "status": email.status,
         "thread_created": thread.first_seen_at == payload.timestamp
     }
     
@@ -142,6 +140,6 @@ def ingest_email(payload: EmailIngestPayload, db: Session = Depends(get_db)):
         email_id=email.id,
         message_id=email.message_id,
         thread_id=thread.thread_id,
-        status="Received",
+        status=email.status,
         priority_score=email.priority_score
     )

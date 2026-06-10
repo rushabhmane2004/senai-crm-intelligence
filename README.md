@@ -255,3 +255,37 @@ All API errors return a standard envelope schema:
   "details": {}
 }
 ```
+
+---
+
+## Phase 2: Heuristic Classification Engine
+
+Phase 2 introduces a rule-based deterministic classifier executing synchronously during ingestion (`POST /api/ingest`). It checks messages for patterns and security/legal risks before any downstream LLM or agent workflows.
+
+### Sequential Evaluation Rules
+The classifier scans sender addresses and combined subjects/bodies in a strict priority order:
+1. **Security**: Triggers `Security` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `100`.
+2. **Legal**: Triggers `Legal` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `95`.
+3. **GDPR / Compliance legal**: Triggers `Compliance` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `95`.
+4. **Internal**: Triggers `Internal` category, `Low` urgency, `Ignored` status, `requires_human` = false, and priority score `10`.
+5. **Spam**: Triggers `Spam` category, `Low` urgency, `Spam` status, `requires_human` = false, and priority score `5`.
+6. **P0 Outage**: Triggers `Complaint` category, `Critical` urgency, `Escalated` status, `requires_human` = true, and priority score `90`.
+7. **Reputation / Churn**: Triggers `Complaint` category, `High` urgency, `Escalated` status, `requires_human` = true, and priority score `85`.
+8. **Refund / Angry Complaint**: Triggers `Complaint` category, `High` urgency, `Escalated` status, `requires_human` = true, and priority score `80`.
+9. **Bug Report**: Triggers `Bug Report` category, `Medium` urgency, `Processing` status, `requires_human` = true, and priority score `60`.
+10. **Compliance**: Triggers `Compliance` category, `High` urgency, `Escalated` status, `requires_human` = true, and priority score `75`.
+11. **Billing**: Triggers `Billing` category, `Medium` urgency, `Processing` status, `requires_human` = false, and priority score `50`.
+12. **Pricing / Sales Inquiry**: Triggers `Inquiry` category, `Medium` urgency, `Processing` status, `requires_human` = false, and priority score `45`.
+13. **Feature Request**: Triggers `Feature Request` category, `Low` urgency, `Processing` status, `requires_human` = false, and priority score `30`.
+14. **Default (Other)**: Triggers `Other` category, `Low` urgency, `Processing` status, `requires_human` = false, and priority score `20`.
+
+### Expected Verification Results
+
+* **`msg_038`** (Ransomware threat) -> Category: `Security`, Urgency: `Critical`, Status: `Escalated`, Priority: `100`, Requires Human: `true`.
+* **`msg_052`** (GDPR Article 20 request) -> Category: `Compliance`, Urgency: `Critical`, Status: `Escalated`, Priority: `95`, Requires Human: `true`.
+* **`msg_020`** (Cease and desist legal notice) -> Category: `Legal`, Urgency: `Critical`, Status: `Escalated`, Priority: `95`, Requires Human: `true`.
+* **`msg_060`** (SLA breach + legal escalation) -> Category: `Legal`, Urgency: `Critical`, Status: `Escalated`, Priority: `95`, Requires Human: `true` (specifically excludes matching the generic Security `breach` rule due to `SLA breach` check).
+* **`msg_033`** (Public review / churn threat) -> Category: `Complaint`, Urgency: `High`, Status: `Escalated`, Priority: `85`, Requires Human: `true`.
+* **`msg_003`**, **`msg_031`**, **`msg_039`** -> Category: `Spam`, Status: `Spam`, Priority: `5`.
+* **`msg_017`**, **`msg_035`** -> Category: `Internal`, Status: `Ignored`, Priority: `10`.
+

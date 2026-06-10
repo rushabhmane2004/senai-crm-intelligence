@@ -16,14 +16,14 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
     # 2. Pending emails count (Status: Received or Processing)
     pending_emails = db.query(Email).filter(Email.status.in_(["Received", "Processing"])).count()
 
-    # 3. Spam emails count (Status: Spam)
-    spam_emails = db.query(Email).filter(Email.status == "Spam").count()
+    # 3. Spam emails count (Category is Spam or Status is Spam)
+    spam_emails = db.query(Email).filter((Email.category == "Spam") | (Email.status == "Spam")).count()
 
     # 4. Escalated emails count (Status: Escalated)
     escalated_emails = db.query(Email).filter(Email.status == "Escalated").count()
 
-    # 5. Critical emails count (Priority Score: 3)
-    critical_emails = db.query(Email).filter(Email.priority_score == 3).count()
+    # 5. Critical emails count (Urgency is Critical)
+    critical_emails = db.query(Email).filter(Email.urgency == "Critical").count()
 
     # 6. Total contacts count
     total_contacts = db.query(Contact).count()

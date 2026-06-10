@@ -22,5 +22,11 @@ def get_email_status(message_id: str, db: Session = Depends(get_db)):
 
     return EmailStatusResponse(
         message_id=email.message_id,
-        status=email.status
+        status=email.status,
+        category=email.category,
+        urgency=email.urgency,
+        priority_score=email.priority_score,
+        requires_human=email.requires_human,
+        confidence=email.confidence,
+        raw_entities=email.raw_entities
     )

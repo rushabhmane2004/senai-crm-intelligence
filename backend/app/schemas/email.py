@@ -20,6 +20,12 @@ class EmailIngestResponse(BaseModel):
 class EmailStatusResponse(BaseModel):
     message_id: str
     status: str
+    category: Optional[str] = None
+    urgency: Optional[str] = None
+    priority_score: Optional[int] = None
+    requires_human: Optional[bool] = None
+    confidence: Optional[float] = None
+    raw_entities: Optional[Dict[str, Any]] = None
 
 # Schema definitions for GET /threads/{contact_email}
 class ActionSchema(BaseModel):
