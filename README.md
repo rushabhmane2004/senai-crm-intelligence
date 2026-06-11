@@ -91,6 +91,10 @@ Once `docker compose up --build` completes, all three services are available:
 | **API Docs (Swagger UI)** | http://localhost:8000/docs |
 | **Health Check** | http://localhost:8000/health |
 
+> **Docker mode is lightweight** — no GPU, no CUDA, and no PyTorch packages are downloaded.
+> The backend runs in offline/demo mode using ChromaDB's built-in ONNX embedding.
+> `.env.example` is sufficient for a full local demo startup.
+
 ---
 
 ## 4. Environment Variables
@@ -115,8 +119,10 @@ The system runs fully **offline by default**:
 - `LLM_PROVIDER=mock` — deterministic structured output, no API key needed.
 - If `OPENAI_API_KEY` is not set, the backend automatically falls back to `mock` mode.
 - Web intelligence runs in `offline_mock` mode with realistic cached data.
+- **RAG embeddings in Docker** use ChromaDB's built-in ONNX model — no PyTorch or GPU required.
+- `sentence-transformers` (full PyTorch) is only used in local development; Docker uses the lightweight ONNX fallback automatically.
 
-You do **not** need an OpenAI key to evaluate the project.
+You do **not** need an OpenAI key, GPU, or CUDA to evaluate the project.
 
 ---
 
