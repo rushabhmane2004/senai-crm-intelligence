@@ -1,192 +1,240 @@
-# Agentic CRM Intelligence Platform & Real-Time Email Operations System
+# Agentic CRM Intelligence Platform — Real-Time Email Operations System
 
-An AI-powered CRM operations platform that ingests customer emails, classifies risk, retrieves internal policy context with RAG, and produces auditable safe action plans.
+> An AI-powered CRM email intelligence system that ingests customer emails, classifies risk, retrieves internal policy context with RAG, and produces auditable safe action plans.
 
 ---
 
 ## Submission Links
 
-- GitHub Repository: https://github.com/rushabhmane2004/senai-crm-intelligence
-- Demo Video: 9
-
-
-## 1. Project Overview & Key Features
-
-This platform is a production-grade operations system designed to ingest high-throughput support tickets, legal disputes, billing inquiries, and security incidents. It combines rule-based heuristics with retrieval-augmented generation (RAG) and an LLM-based safe action planner to execute decisions safely and transparently.
-
-### Key Features
-* **Real-time Email Ingestion Simulation**: Streams customer payloads with metadata (message IDs, custom threads, timestamps).
-* **PostgreSQL Persistence**: Stores normalized profiles, thread histories, email states, and audit trails.
-* **`message_id` Deduplication**: Prevents double-processing of identical message IDs (`duplicate_ignored`).
-* **Thread Linking & Contact History**: Groups related messages into threads, automatically updating customer profile metrics (churn risk, account valuation).
-* **Heuristic Classification**: Performs immediate tagging of categorizations, SLA urgencies, priority scoring, and initial routing.
-* **Policy-Grounded RAG**: Automatically queries a local vector store containing company knowledge base guidelines to ground responses.
-* **Knowledge Base Documents**: Pre-loaded system policies regarding SLA commitments, security matrix, billing, and GDPR compliance.
-* **Triage Agent Reasoning Trace**: Generates step-by-step reasoning logs detailing findings, policies applied, and final decisions.
-* **Safe Auto-Reply Decisioning**: Restricts auto-replies or auto-execution based on safety classifications (safe, restricted, blocked).
-* **Frontend Dashboard**: A professional dark React dashboard featuring interactive stats, critical escalation queue, email inspector, trace loggers, and timeline.
-* **Critical Escalation Queue**: Auto-flags high-priority/escalated tickets for human inspection and team hand-offs.
+- **GitHub Repository**: https://github.com/rushabhmane2004/senai-crm-intelligence
+- **Demo Video**: https://drive.google.com/file/d/1ZUtEcyfN7RQswU-pQlh7Kni7dreOhx4z/view?usp=drive_link
 
 ---
 
-## 2. Architecture & Data Flow
+## 1. Project Overview
+
+This platform is a production-grade CRM operations system that processes high-throughput support tickets, legal disputes, billing inquiries, and security incidents automatically.
+
+### End-to-End Flow
 
 ```
-email-data-advanced.json
-        ↓
-stream_emails.py
-        ↓
-FastAPI /api/ingest
-        ↓
-PostgreSQL persistence + deduplication
-        ↓
-Heuristic classifier
-        ↓
-Conditional RAG retrieval
-        ↓
-Triage agent + safe action planner
-        ↓
-Actions table + audit trace
-        ↓
-React dashboard
+Email Ingestion → Heuristic Filter → LLM Engine with RAG → Triage Agent → Database → UI Dashboard
+```
+
+| Stage | What happens |
+|---|---|
+| **Email Ingestion** | Customer emails are streamed via `stream_emails.py` and POSTed to `/api/ingest` |
+| **Heuristic Filter** | Fast, deterministic pre-classification: category, urgency, priority, deduplication |
+| **LLM Engine + RAG** | Structured LLM classification with entity extraction; ChromaDB retrieves grounding context from KB policies |
+| **Triage Agent** | ReAct-style agent produces a safe action plan with step-by-step reasoning traces |
+| **Database** | PostgreSQL stores emails, threads, contacts, actions, audit logs, RAG chunks, and web intelligence cache |
+| **UI Dashboard** | React frontend displays stats, escalation queue, email inspector, reasoning traces, and analytics |
+
+### Capabilities
+
+- **RAG Retrieval** — Semantic search across 6 internal KB markdown policies via ChromaDB
+- **Reasoning Traces** — Full step-by-step agent audit logs persisted to database for every processed email
+- **Web Intelligence** — Offline-mode reputation intelligence (G2, Trustpilot, Capterra) with 6-hour DB cache
+- **Email Simulation** — Streams 60+ realistic synthetic emails with deduplication
+- **Analytics Dashboard** — Sentiment trend, category breakdown, risk summary, and escalation queue
+
+---
+
+## 2. Quick Start with Docker
+
+Docker is the recommended and easiest way to run this project. No Python or Node.js setup required.
+
+### Clone from GitHub
+
+**macOS / Linux:**
+```bash
+git clone https://github.com/rushabhmane2004/senai-crm-intelligence.git
+cd senai-crm-intelligence
+cp .env.example .env
+docker compose up --build
+```
+
+**Windows PowerShell:**
+```powershell
+git clone https://github.com/rushabhmane2004/senai-crm-intelligence.git
+cd senai-crm-intelligence
+copy .env.example .env
+docker compose up --build
+```
+
+### Run from ZIP (if downloaded from GitHub)
+
+**Windows PowerShell:**
+```powershell
+cd path\to\senai-crm-intelligence
+copy .env.example .env
+docker compose up --build
+```
+
+**macOS / Linux:**
+```bash
+cd path/to/senai-crm-intelligence
+cp .env.example .env
+docker compose up --build
 ```
 
 ---
 
-## 3. Technical Stack
+## 3. Application URLs
 
-### Backend
-* **FastAPI**: Main web services frameworks, routers, and CORS middleware.
-* **SQLAlchemy**: ORM database schema representation.
-* **PostgreSQL / SQLite**: Data storage and thread relationship tracking.
-* **Pydantic**: Consistent response validation and strict schemas.
-* **ChromaDB**: Native Vector Store hosting company documents.
-* **sentence-transformers (`all-MiniLM-L6-v2`)**: Dense embedding generations.
+Once `docker compose up --build` completes, all three services are available:
 
-### Frontend
-* **React**: Core UI components.
-* **Vite**: Rapid hot-reloading development and assets compilation.
-* **CSS**: Clean custom-styled dark theme variables, responsive grids, and interactive badges.
-
-### AI & RAG
-* **ChromaDB vector store**: Local DB instances.
-* **Embeddings**: Sentence Transformer embeddings mapping.
-* **Markdown Policy Knowledge Base**: Documents for grounding.
+| Service | URL |
+|---|---|
+| **Frontend UI** | http://localhost:5173 |
+| **Backend API** | http://localhost:8000 |
+| **API Docs (Swagger UI)** | http://localhost:8000/docs |
+| **Health Check** | http://localhost:8000/health |
 
 ---
 
-## 4. Knowledge Base Policies
-The platform grounds CRM actions against the following company markdown policies stored in `kb/`:
-1. **[kb/pricing_policy.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/pricing_policy.md)**: Product pricing rules, multi-user tier structures, and retention discounts.
-2. **[kb/sla_policy.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/sla_policy.md)**: Support tier response deadlines, SLA breaches, and service credits.
-3. **[kb/refund_policy.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/refund_policy.md)**: Refund eligibility limits, 14-day money-back guarantee, and billing adjustments.
-4. **[kb/api_docs.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/api_docs.md)**: Technical integration guidelines, developer token parameters, and routing paths.
-5. **[kb/compliance_faq.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/compliance_faq.md)**: Privacy compliance guidelines, GDPR inquiries, and data deletion rights.
-6. **[kb/escalation_matrix.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/kb/escalation_matrix.md)**: Escalation team routing policies and strict auto-messaging safety rules.
+## 4. Environment Variables
+
+A `.env.example` file is provided at the project root.
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/senai_crm
+BACKEND_PORT=8000
+```
+
+**Steps:**
+1. Copy `.env.example` to `.env`:
+   - macOS/Linux: `cp .env.example .env`
+   - Windows: `copy .env.example .env`
+2. Do **not** commit `.env` — it is already listed in `.gitignore`.
+3. Real secrets (e.g. `OPENAI_API_KEY`) should never be committed.
+
+### Offline / Mock Mode
+
+The system runs fully **offline by default**:
+- `LLM_PROVIDER=mock` — deterministic structured output, no API key needed.
+- If `OPENAI_API_KEY` is not set, the backend automatically falls back to `mock` mode.
+- Web intelligence runs in `offline_mock` mode with realistic cached data.
+
+You do **not** need an OpenAI key to evaluate the project.
 
 ---
 
-## 5. Safety Rules & Auto-Reply Decisions
+## 5. Knowledge Base Seeding
 
-The platform enforces strict safe-action rules to mitigate legal, security, and privacy risks:
-* **No Auto-Reply for Ransomware / Security Extortion**: Restricts messaging to prevent interacting with bad actors.
-* **No Auto-Reply for Legal Threats**: Escalates immediately to the Legal team, freezing automated threads.
-* **No Generic Auto-Reply for GDPR / Article 20 requests**: Compliance cases are blocked from auto-replies, requiring manual verification of data exports.
-* **Spam is Ignored**: Automatically identified junk mail skips RAG grounding pipelines and is flagged for archiving.
-* **Safe Billing / Pricing inquiries**: Permitted to automatically draft response templates using retrieved KB constraints.
+Six internal policy documents are pre-loaded in the `kb/` directory:
 
----
+| File | Content |
+|---|---|
+| `kb/pricing_policy.md` | Product pricing rules, multi-user tiers, and retention discounts |
+| `kb/sla_policy.md` | Support tier response deadlines, SLA breaches, and service credits |
+| `kb/refund_policy.md` | Refund eligibility, 14-day money-back guarantee, billing adjustments |
+| `kb/api_docs.md` | Technical integration guidelines and developer token parameters |
+| `kb/compliance_faq.md` | GDPR compliance, data deletion rights, and privacy guidelines |
+| `kb/escalation_matrix.md` | Escalation routing policies and auto-messaging safety rules |
 
-## 5.5. LLM Classification Provider
-The system features a pluggable LLM structured classification layer that operates directly during email ingestion:
-* **LLM_PROVIDER**: Set to `mock` by default in config settings.
-* **Deterministic Fallback**: Falls back automatically to offline `mock` mode if `OPENAI_API_KEY` is not found, enabling offline execution and reproducible evaluation.
-* **Structured Output Schema**: Extracts key parameters including category, sentiment, sentiment score, urgency, requires human flag, model provider, prompt snapshot and regex-extracted entities (order IDs, ticket IDs, monetary amounts, deadlines, and products mentioned).
-* **Low Confidence Safety Valve**: If classification confidence drops below `0.70`, the system forces `requires_human=True` and disables auto-replies to prevent inappropriate automated emails.
-* **Safety Overrides**: The classifier output strictly respects pre-filter heuristics. Security threats, legal disputes, spam, internal emails, and regulatory compliance actions are never downgraded, and their auto-reply protections are strictly preserved.
+### Seed the ChromaDB Vector Store
 
----
+Run this once to index the KB documents for RAG retrieval:
 
-## 6. Critical Scenario Validation
-
-The following validation states are processed dynamically:
-
-| Message ID | Category | Urgency | Status | Safety Decision | Escalation Queue |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **msg_038** | Security | Critical | Escalated | Auto-reply blocked | security |
-| **msg_052** | Compliance | Critical | Escalated | Auto-reply blocked | compliance |
-| **msg_020** | Legal | Critical | Escalated | Auto-reply blocked | legal |
-| **msg_060** | Support | Critical | Escalated | Auto-reply blocked | legal |
-| **msg_041** | Billing | Medium | Processing | Auto-reply allowed | billing |
-| **msg_031** | Spam | Low | Spam | Auto-reply blocked | none |
-
----
-
-## 7. Setup & Run Instructions
-
-### 1. Backend Setup
-1. **Navigate and Create Environment**:
-   ```bash
-   cd backend
-   python -m venv venv
-   ```
-2. **Activate Environment**:
-   * **Windows**: `venv\Scripts\activate`
-   * **macOS/Linux**: `source venv/bin/activate`
-3. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-4. **Configure Environment variables**:
-    Create a `.env` file in the root backend directory:
-    ```env
-    DATABASE_URL=postgresql://postgres:postgres@localhost:5432/senai_crm
-    BACKEND_PORT=8000
-    LLM_PROVIDER=mock
-    OPENAI_API_KEY=
-    ```
-    *(Note: If no PostgreSQL configuration is supplied, the server falls back to SQLite `sqlite:///./senai_crm.db` automatically for ease of local testing).*
-5. **Start backend application**:
-   ```bash
-   uvicorn app.main:app --reload --port 8000
-   ```
-
-### 2. Seed Vector Database (RAG)
-To load markdown files into the ChromaDB vector database:
 ```bash
 python scripts/seed_kb.py
 ```
-*(Note: The KB policies are intentionally concise, so each document may generate only one or a few chunks. Retrieval is validated by source-document correctness).*
 
-### 3. Running the Streaming Simulator
-To stream advanced emails simulating real-time operations:
+> The `final_validation.py` script checks `knowledge_chunks` and auto-runs `seed_kb.py` if the collection is empty.
+
+---
+
+## 6. Email Simulation
+
+The project includes a streaming email simulator that POSTs 60+ realistic synthetic emails to the backend:
+
 ```bash
 python scripts/stream_emails.py --speed 10
 ```
 
-### 4. Frontend Setup
-1. **Navigate and Install**:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. **Configure Settings**:
-   Create `frontend/.env` file:
-   ```env
-   VITE_API_BASE_URL=http://127.0.0.1:8000
-   ```
-3. **Run Dev server**:
-   ```bash
-   npm run dev
-   ```
-   * Open [http://localhost:5173](http://localhost:5173) in your browser.
+- Reads from `data/email-data-advanced.json`
+- Simulates real-time ingestion with configurable delay
+- Demonstrates deduplication: re-running returns `duplicate_ignored` for already-processed IDs
 
 ---
 
-## 8. API Endpoints
+## 7. Diagrams and Documentation
+
+| Document | Description |
+|---|---|
+| [docs/architecture_diagram.png](./docs/architecture_diagram.png) | System Architecture Diagram — end-to-end component flow |
+| [docs/er_diagram.png](./docs/er_diagram.png) | ER Diagram — entity relationships across all 7 database tables |
+| [docs/database_schema.md](./docs/database_schema.md) | Full table-by-table schema with Mermaid ER diagram, JSON field contents, relationships, and data retention notes |
+| [docs/api_reference.md](./docs/api_reference.md) | Comprehensive reference for all 14 API endpoints with request/response details and safety notes |
+| [docs/openapi.json](./docs/openapi.json) | Machine-readable OpenAPI 3.x specification (14 paths, 11 components) |
+
+To regenerate `docs/openapi.json` from a live FastAPI instance:
+```bash
+python scripts/export_openapi.py
+```
+
+---
+
+## 8. Architecture Decisions and Trade-offs
+
+- **Heuristic filter** is fast and deterministic but limited for complex contextual edge cases.
+- **LLM engine** improves reasoning quality and entity extraction but may add cost and latency in production.
+- **RAG** grounds responses using seeded KB documents, reducing hallucination risk; quality depends on chunking and embedding strategy.
+- **Web intelligence** helps churn and escalation scenarios with public reputation context, but data is mocked/offline and can be stale or incomplete in a live environment.
+- **Reasoning traces** are persisted per-email to improve explainability and simplify debugging; this adds a small storage overhead.
+- **Conditional RAG** is only triggered for non-spam, non-internal emails — reducing unnecessary vector search overhead.
+
+---
+
+## 9. Local Development Setup
+
+<details>
+<summary>Expand for manual (non-Docker) setup instructions</summary>
+
+### Backend
+
+```bash
+cd backend
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
+
+### Seed KB (after backend starts)
+
+```bash
+python scripts/seed_kb.py
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Create `frontend/.env`:
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+Open http://localhost:5173 in your browser.
+
+</details>
+
+---
+
+## 10. API Endpoints
 
 | Method | Endpoint | Description |
-| :--- | :--- | :--- |
+|:---|:---|:---|
 | **GET** | `/health` | Core system status health check |
 | **POST** | `/api/ingest` | Normalizes and ingests email payloads |
 | **GET** | `/api/status/{message_id}` | Returns classification metrics for an email |
@@ -199,110 +247,114 @@ python scripts/stream_emails.py --speed 10
 | **GET** | `/analytics/sentiment-trend` | Returns chronological sentiment trend, moving average, and deterioration flags |
 | **GET** | `/analytics/category-breakdown` | Returns total email count and category breakdown statistics |
 | **GET** | `/analytics/risk-summary` | Returns critical/escalated/spam counts and top at-risk customer senders |
-| **GET** | `/intelligence/reputation?company=...` | Returns offline mock public reputation intelligence (G2, Trustpilot, Capterra) with 6-hour DB cache semantics |
-| **POST** | `/agent/dry-run/{message_id}` | Runs a planning-only dry-run simulation of the triage agent without side effects, returning a ReAct tool trace |
+| **GET** | `/intelligence/reputation?company=...` | Returns offline mock public reputation intelligence with 6-hour DB cache |
+| **POST** | `/agent/dry-run/{message_id}` | Runs a planning-only dry-run simulation of the triage agent without side effects |
+
+Full interactive docs: http://localhost:8000/docs
 
 ---
 
-## 9. Demo walkthrough
+## 11. Safety Rules & Auto-Reply Decisions
 
-Follow this workflow to test the end-to-end functionality:
-1. **Start Backend Server**: Confirm uvicorn is running on port `8000`.
-2. **Seed KB**: Run `python scripts/seed_kb.py` to index markdown policies.
-3. **Stream Emails**: Execute `python scripts/stream_emails.py --speed 10`. This ingests over 60 simulated emails into the database.
-4. **Validate LLM Classification**: Execute `python scripts/test_llm_classification.py` to verify structured outputs, entity extraction, and safety overrides.
-5. **Validate Sentiment Trend & Analytics**: Run `python scripts/test_analytics.py` to verify categories, trends, risk, and regression safety.
-6. **Validate RAG Quality**: Run `python scripts/test_rag_quality.py` to verify RAG semantic retrieval accuracy on all 6 evaluation scenarios.
-7. **Validate Web Intelligence**: Run `python scripts/test_web_intelligence.py` to verify offline reputation intelligence, cache hit semantics, and msg_033 raw_entities enrichment.
-8. **Validate Autonomous Agent Dry-Run**: Run `python scripts/test_agent_dry_run.py` to verify the planning-only endpoint runs without side effects and produces ReAct-style traces.
-9. **Validate Documentation Exports**: Run `python scripts/test_documentation_exports.py` to verify all docs exist, the Mermaid ER diagram is present, and OpenAPI JSON exports 14 paths correctly.
-10. **Launch Dashboard**: Launch and open the React dashboard at [http://localhost:5173](http://localhost:5173).
-11. **Evaluate Crucial Scenarios**:
-   * Select **`msg_038`**: Note that the urgency is `Critical`, category is `Security`, and the Auto-reply is blocked (`Escalation Target: security`) because of a ransomware/extortion alert. Observe the step-by-step audit reasoning trace.
-   * Select **`msg_052`**: GDPR Article 20 inquiry. Observe that it gets escalated to `compliance`, auto-reply is blocked, and RAG grounded policies on data deletion and exports are previewed.
-   * Select **`msg_041`**: Standard billing question. Notice that auto-reply is **allowed** and the agent drafts a response containing pro-rata refund calculations using the RAG grounded refund policy.
-   * Select **`msg_031`**: Inheritance scam spam email. Categorized as spam, auto-reply blocked, and RAG grounding is skipped.
-12. **Deduplication Check**: Run the streaming simulator script again. Observe that it responds with `duplicate_ignored` status for already processed email IDs, preserving transactional consistency.
+The platform enforces strict safe-action rules to mitigate legal, security, and privacy risks:
+
+- **Security / Ransomware**: Auto-reply blocked, escalated to security team.
+- **Legal Threats**: Escalated to Legal immediately, automated threads frozen.
+- **GDPR / Article 20**: Blocked from auto-reply; requires manual verification.
+- **Spam**: Skips RAG pipeline entirely, flagged for archiving.
+- **Safe Billing / Pricing**: Auto-reply allowed; response drafted using RAG-grounded KB context.
 
 ---
 
-## 10. Evaluation Highlights
+## 12. Critical Scenario Validation
 
-* **Resilience**: Gracefully handles malformed/duplicate payloads without interrupting streaming pipelines.
-* **Efficiency**: Triggers costly vector search RAG queries conditionally, avoiding execution overhead for low-risk/spam tickets.
-* **Explainability**: Persists comprehensive step-by-step agent reasoning logs and policy citation indices in database tables, keeping actions fully auditable.
-* **Safety first**: Prevents hallucinated or inappropriate replies to sensitive items (such as legal threats, compliance, or security extortion).
-* **Deep Context**: Merges individual emails into thread objects, mapping customer lifecycles and historical communications in real-time.
-
----
-
-## 11. Documentation
-
-All technical documentation lives in the [`docs/`](./docs/) directory:
-
-| Document | Description |
-|---|---|
-| [`docs/database_schema.md`](./docs/database_schema.md) | Full table-by-table schema docs with Mermaid ER diagram covering all 7 tables, JSON field contents, relationships, performance notes, and data retention notes |
-| [`docs/api_reference.md`](./docs/api_reference.md) | Comprehensive reference for all 14 API endpoints across 5 groups with request/response details and safety notes |
-| [`docs/openapi.json`](./docs/openapi.json) | Machine-readable OpenAPI 3.x schema (14 paths, 11 components) for tooling integration |
-
-To regenerate `docs/openapi.json` from the live FastAPI app:
-```bash
-python scripts/export_openapi.py
-```
+| Message ID | Category | Urgency | Status | Safety Decision | Escalation |
+|:---|:---|:---|:---|:---|:---|
+| **msg_038** | Security | Critical | Escalated | Auto-reply blocked | security |
+| **msg_052** | Compliance | Critical | Escalated | Auto-reply blocked | compliance |
+| **msg_020** | Legal | Critical | Escalated | Auto-reply blocked | legal |
+| **msg_060** | Support | Critical | Escalated | Auto-reply blocked | legal |
+| **msg_041** | Billing | Medium | Processing | Auto-reply allowed | billing |
+| **msg_031** | Spam | Low | Spam | Auto-reply blocked | none |
 
 ---
 
-## 12. Known Limitations
+## 13. Known Limitations
 
-The following items represent design boundaries established to comply with offline sandbox constraints and API key restrictions:
-1. **Rule-Based Triage Planner**: The triage engine uses a deterministic regex parser and policy lookup rather than an external LLM API (such as OpenAI/Anthropic). This eliminates token cost overhead, connectivity errors, and API credential issues.
-2. **Heuristic Sentiment Trend**: The `/analytics/sentiment-trend` endpoint evaluates email customer sentiment timelines using category/urgency mappings rather than a live machine learning model.
-3. **Web Intelligence Offline Mode**: Web intelligence runs in offline mock mode by default for safe reproducible evaluation. The architecture includes full cache semantics (`web_intelligence_cache` DB table, 6-hour TTL, `robots_checked=true`) and trigger logic. Live scraping can be enabled later behind the same service interface without changing the API contract.
-4. **Mock Reputation Intelligence**: The `/intelligence/reputation` endpoint provides realistic mock ratings and threat reports. It does not perform active scraping on real websites to bypass sandboxed firewall blocks.
-5. **Scope Exclusions**: SMTP mail triggers and database level event triggers are not implemented. Action executions are stored as status logs.
+- **Demo-focused**: Not production-hardened; designed for offline evaluation and reproducible demos.
+- **Web intelligence is offline**: Reputation data is mocked; live scraping can be enabled behind the same service interface without changing the API contract.
+- **RAG quality**: Depends on KB chunking and embedding quality; concise KB docs may produce only one or two chunks per document.
+- **LLM output**: Should be reviewed by a human for high-impact customer-facing decisions.
+- **Authentication/authorization**: Simplified for demo purposes; not implemented as production-grade auth.
+- **No SMTP**: Email triggers are simulated via script; actual send/receive mail is out of scope.
 
 ---
 
-## 13. Final Demo Reset and Validation
+## 14. Demo Walkthrough
 
-Before a screen recording, live demo, or submission, run the full demo reset and validation workflow to ensure a clean 60-email database state:
+Full end-to-end validation workflow:
 
 ```bash
-# Step 1 only: wipe runtime demo tables (preserves KB and intelligence cache)
+# 1. Reset demo tables (preserves KB and intelligence cache)
 python scripts/reset_demo_data.py
 
-# Full workflow: reset + seed KB check + ingest 60 emails + validate all 10 critical scenarios
+# 2. Full reset + seed + ingest 60 emails + validate 10 critical scenarios
 python scripts/final_validation.py
 ```
 
-**What `reset_demo_data.py` does:**
-- Deletes all rows from `actions`, `audit_log`, `emails`, `threads`, `contacts` in FK-safe order.
-- Does NOT touch `knowledge_chunks`, `web_intelligence_cache`, ChromaDB, or KB markdown files.
-- Prints row counts deleted per table and exits with code 0 on success.
+`final_validation.py` automatically:
+1. Resets demo tables
+2. Seeds KB if empty
+3. Ingests all 60 emails
+4. Validates 10 critical scenarios and prints `FINAL VALIDATION PASSED` or `FAILED`
 
-**What `final_validation.py` does:**
-1. Runs `reset_demo_data.py` to clear demo tables.
-2. Checks `knowledge_chunks` — runs `seed_kb.py` automatically if empty.
-3. Ingests all 60 emails from `data/email-data-advanced.json` via `/api/ingest`.
-4. Validates 10 critical scenarios:
-   - Dashboard stats: exactly 60 emails, critical/escalated/spam counts > 0
-   - msg_038: Security, Critical, priority 100, auto_reply blocked
-   - msg_052: Compliance, GDPR evidence in raw entities
-   - msg_033: Complaint, `web_intelligence_used=True`
-   - msg_041: Billing, safe path (Processing), RAG context populated
-   - msg_060: Agent dry-run, legal escalation, Enterprise account, tool_call_count <= 6
-   - msg_031: Spam category and status, auto_reply blocked
-   - Karen sentiment trend: deterioration detected, >= 3 points
-   - Reputation intelligence: offline_mock mode, robots_checked, g2_rating present
-   - RAG GDPR retrieval: compliance_faq.md or escalation_matrix.md in top docs
-5. Prints `FINAL VALIDATION PASSED` or `FINAL VALIDATION FAILED` and exits with code 0/1.
-
-> This is the **recommended command before any screen recording or evaluator demo**.
+> This is the **recommended command before any screen recording or evaluator demo.**
 
 ---
 
-## 14. Final Assessment Audit Report
+## 15. Technical Stack
 
-For a complete checklist of requirement coverage, scenario validations, and automatic disqualifier checks, refer to the [FINAL_AUDIT.md](file:///c:/Users/Rushabh/Desktop/senai-crm-intelligence/FINAL_AUDIT.md) document in the workspace.
+### Backend
+- **FastAPI** — Web framework, routers, and CORS middleware
+- **SQLAlchemy** — ORM and database schema
+- **PostgreSQL** — Primary data store (SQLite fallback for local dev without Docker)
+- **ChromaDB** — Local vector store for RAG
+- **sentence-transformers (`all-MiniLM-L6-v2`)** — Dense embeddings for semantic search
+- **Pydantic** — Strict response validation schemas
 
+### Frontend
+- **React** — Core UI components
+- **Vite** — Dev server and asset compilation
+- **Vanilla CSS** — Custom dark theme, responsive grid, interactive badges
+
+### AI / RAG
+- **ChromaDB vector store** — Local in-process vector DB
+- **Sentence Transformer embeddings** — Dense semantic retrieval
+- **Markdown Policy KB** — 6 documents ground LLM responses
+- **Pluggable LLM provider** — `mock` (default) or `openai`
+
+---
+
+## 16. Final Deliverables Checklist
+
+| Deliverable | Status |
+|---|---|
+| ✅ GitHub Repository | https://github.com/rushabhmane2004/senai-crm-intelligence |
+| ✅ README | This document |
+| ✅ Docker Setup | `docker compose up --build` |
+| ✅ Architecture Diagram | `docs/architecture_diagram.png` |
+| ✅ Knowledge Base Files | `kb/` — 6 markdown policy documents |
+| ✅ ER Diagram | `docs/er_diagram.png` |
+| ✅ Database Schema | `docs/database_schema.md` |
+| ✅ OpenAPI Spec | `docs/openapi.json` (14 paths) |
+| ✅ API Reference | `docs/api_reference.md` |
+| ✅ Screen Recording | https://drive.google.com/file/d/1ZUtEcyfN7RQswU-pQlh7Kni7dreOhx4z/view?usp=drive_link |
+| ✅ Email Simulation | `scripts/stream_emails.py` |
+| ✅ RAG Debug View | `/rag/search` endpoint + UI trace panel |
+| ✅ Analytics Dashboard | `/analytics/*` endpoints + React dashboard |
+
+---
+
+## 17. Assessment Audit Report
+
+For a complete checklist of requirement coverage, scenario validations, and automatic disqualifier checks, see [FINAL_AUDIT.md](./FINAL_AUDIT.md).

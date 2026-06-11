@@ -1,6 +1,8 @@
 # Python
 venv/
+.venv/
 __pycache__/
+backend/__pycache__/
 *.pyc
 *.pyo
 *.pyd
@@ -8,6 +10,7 @@ __pycache__/
 # Environment files
 .env
 backend/.env
+frontend/.env
 
 # IDE / OS
 .vscode/
@@ -18,13 +21,16 @@ Thumbs.db
 # Logs
 *.log
 
-# Node frontend later
+# Node / Frontend
 node_modules/
+frontend/node_modules/
 dist/
+frontend/dist/
 build/
 
 # Databases
 *.db
 *.sqlite3
 
-backend/chroma_store/
+# ChromaDB
+backend/chroma_store/
